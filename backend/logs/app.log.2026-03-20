@@ -1,0 +1,18 @@
+[2026-03-20 16:33:16,716] [INFO] 启动服务
+[2026-03-20 16:33:23,630] [INFO] [EmbeddingService] 初始化模型: SentenceTransformer(
+  (0): Transformer({'max_seq_length': 256, 'do_lower_case': False, 'architecture': 'BertModel'})
+  (1): Pooling({'word_embedding_dimension': 384, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
+  (2): Normalize()
+), embedding_dim=384
+[2026-03-20 16:33:26,642] [INFO] [MemoryRepo] 更新访问次数: 4 条
+[2026-03-20 16:33:26,644] [INFO] [memory] 命中 4 条
+[2026-03-20 16:33:26,644] [INFO] 对话回答:你是assistant,需要回应用户的话,只能用语言传递情绪和陪伴感,贴合年轻女生聊天节奏.另外生成的文字不必带多余的神态描写
+当前历史对话:
+
+user相关记忆:
+用户在null与[]进行了等待回复与邀请互动，当时情绪为平静
+用户在2026-03-03与导师选择相关问题，当时情绪为压力大但对未来充满期待
+用户在null与[]抱怨未回复并发出幽默提问，当时情绪为焦虑
+用户在null于null与[]进行被忽视与幽默互动，当时情绪为平静
+[2026-03-20 16:33:26,644] [INFO] [llm] request
+[2026-03-20 16:33:42,265] [INFO] [llm] response received

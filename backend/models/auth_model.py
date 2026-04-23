@@ -1,0 +1,16 @@
+from pydantic import BaseModel, Field, EmailStr
+
+class WXLoginRequset(BaseModel):
+    code: str= ...
+
+
+class WXLoginResponse(BaseModel):
+    open_id: str=...
+    token: str=...
+
+class LoginRequset(BaseModel):
+    open_id: str=...
+
+
+class LoginResponse(BaseModel):
+    token: str=...
