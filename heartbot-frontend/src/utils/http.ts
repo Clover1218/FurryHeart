@@ -9,7 +9,7 @@ export const http = axios.create({
     'Content-Type': 'application/json'
   },
   withCredentials: true
-})
+}) 
 
 // 请求拦截器 - 添加 Authorization 头部
 http.interceptors.request.use(
@@ -41,7 +41,7 @@ http.interceptors.response.use(
     }
 
     // ✅ 成功时只返回 data（关键优化点）
-    return res.data
+    return res
   },
   (error) => {
     console.error('[NETWORK ERROR]', error.message)

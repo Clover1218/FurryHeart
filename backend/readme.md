@@ -46,6 +46,11 @@ CREATE TABLE user_profiles (
 1.画像改变应不宜过多，可记忆存到一定程度后，或者生成一定insight后进行更新
 2.记忆选取使用混合检索：关键词(标签)检索+向量检索。并根据相关性、时效性、重要性排名选Top-k个
 
+## 用户设置
+
+prompt.system_base_prompt
+系统基础人设
+prompt.memory_extract_prompt
 
 ## 结构
 ![结构图](./flowchart.svg)

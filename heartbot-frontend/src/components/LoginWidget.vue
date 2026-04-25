@@ -115,10 +115,8 @@ defineExpose({
 
 <style scoped>
 .login-widget {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 100;
+  display: flex;
+  align-items: center;
 }
 
 /* 🌫 玻璃按钮风格（和你整体 UI 统一） */
@@ -127,6 +125,10 @@ defineExpose({
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* popover */

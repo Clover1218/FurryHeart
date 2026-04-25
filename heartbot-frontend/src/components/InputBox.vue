@@ -5,7 +5,7 @@ const emit = defineEmits<{
   (e: 'send', message: string): void
 }>()
 
-const inputText = ref('2')
+const inputText = ref('')
 
 const handleSend = () => {
   if (inputText.value.trim()) {

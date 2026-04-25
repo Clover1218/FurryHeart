@@ -1,6 +1,7 @@
 import json
 import re
 
+from services.config_service import ConfigService
 from services.emotion_service import EmotionService
 from services.session_service import SessionService
 from services.history_service import HistoryService
@@ -17,6 +18,7 @@ class ChatOrchestrator:
                  history_svc:HistoryService,
                  memory_svc:MemoryService,
                  llm_svc:LLMService,
+                 config_svc:ConfigService,
                  logger:logging.Logger):
 
         self.session_svc = session_svc
@@ -25,6 +27,7 @@ class ChatOrchestrator:
         self.history_svc = history_svc
         self.memory_svc = memory_svc
         self.llm_svc = llm_svc
+        self.config_svc = config_svc
         self.logger=logger
 
     async def chat(self, user_id, user_input):
@@ -44,11 +47,14 @@ class ChatOrchestrator:
             await self.memory_svc.extract_memory(user_id,user_id,history_str)
 
             
-        memories= await self.memory_svc.get_memory(user_id,user_input,user_input,5)
+        memories="" # await self.memory_svc.get_memory(user_id,user_input,user_input,5)
         memories_string='\n'.join(event['event_sentence'] for event in memories)
 
-
-        prompt=base_chat_template.render(history=history_str,input=user_input)
+        user_config=await self.config_svc.get_user_final_config(user_id)
+        print(type(user_config["prompt.system_base"]))
+        system_base=json.loads(user_config["prompt.system_base"])['text']
+        
+        prompt=system_base+base_chat_template.render(history=history_str,input=user_input)
 
         
         reply = await self.llm_svc.generate(prompt)

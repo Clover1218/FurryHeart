@@ -4,9 +4,9 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingService:
     def __init__(self,logger):
         self.logger = logger
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-        self.dim = self.model.get_sentence_embedding_dimension()
-        self.logger.info(f"[EmbeddingService] 初始化模型: {self.model}, embedding_dim={self.dim}")
+        # self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        # self.dim = self.model.get_sentence_embedding_dimension()
+        # self.logger.info(f"[EmbeddingService] 初始化模型: {self.model}, embedding_dim={self.dim}")
 
     async def embed(self, text: str) -> list[float]:
         """
