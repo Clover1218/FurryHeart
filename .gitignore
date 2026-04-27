@@ -10,7 +10,7 @@ logs/
 backend/logs/
 
 # 环境变量文件
-
+.env
 # 安装的依赖
 .pip/
 venv/

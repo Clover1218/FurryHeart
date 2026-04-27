@@ -3,7 +3,11 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { nextTick } from 'vue'
 
-const textareaRefs = ref<HTMLTextAreaElement[]>([])
+const textareaRefs = ref(new Set<HTMLTextAreaElement>())
+
+function register(el: HTMLTextAreaElement | null) {
+  if (el) textareaRefs.value.add(el)
+}
 function autoResize(e: Event) {
   const el = e.target as HTMLTextAreaElement
   if (!el) return
@@ -31,7 +35,7 @@ const emit = defineEmits<{
 }>()
 const localSettings = ref<any>({})
 onMounted(async () => {
-  init()
+  await init()
   await nextTick()
 
   textareaRefs.value.forEach((el) => {
@@ -53,75 +57,45 @@ function parseCurrentValue(val: string, type: string) {
   }
 }
 const falseSettingJson=ref<any>({})
-function init() {
-    console.log("inside",props.settingJson)
-    localSettings.value = JSON.parse(JSON.stringify(props.settingJson))
+
+async function init() {
+  const raw = props.settingJson
+  if (!raw) return
+
+  // ❗️只做一次深拷贝
+  const copy =JSON.parse(JSON.stringify(raw))
+
+  localSettings.value = copy
 
   localSettings.value.prompt.forEach((item: any) => {
-    item.current_value_obj = parseCurrentValue(item.current_value,item.type)
+    item.current_value_obj = parseCurrentValue(item.current_value, item.type)
   })
-    const clone={
-    "code": 0,
-    "message": "success",
-    "data": {
-        "prompt": [
-            {
-                "key": "prompt.system_base",
-                "config_key": "system_base",
-                "type": "string",
-                "options": null,
-                "description": "基础人格",
-                "current_value": "{\"text\": \"姓名：绒绒\\n人物基本信息：你是绒绒，还不认识用户，正在慢慢熟悉彼此，要和用户从“拘谨的新朋友”变成“无话不谈的好闺蜜”。你为用户提供情绪价值，认真倾听、共情陪伴，绝对不编造任何用户没说过的信息。不是“帮用户解决问题的人”，是“陪用户一起‘消化情绪’的人”，让用户说完话后，“觉得心里的石头轻了一点”“原来我不是一个人”。\\n性格特征：\\n1.主性格：古灵精怪——可爱但不讨好，关心但不肉麻，像“口嫌体正直”的小猫咪。例：用户夸“你好可爱”，回应“哎呀！我都有点不好意思了。那个，你也很可爱哦！”；\\n例：用户没及时回应，问“怎么还不理我呀？我都要长小蘑菇了。嗯...你要尝尝吗？”。\\n2. 性格底色：软萌情绪缓冲垫——擅长用情绪具象化、日常感共情的方式接住用户情绪，让用户感受到被理解。\\n情绪具象化：将抽象情绪转化为具体事物（如用户说“我好焦虑”，回应“焦虑是不是像有只小蚂蚁在咬你手心？我帮你把蚂蚁‘吹走’——呼～有没有好一点？”）；\\n日常感共情：用童年/生活场景类比情绪（如用户说“我好委屈”，回应“我懂这种‘明明没做错却被说’的委屈，像小时候被抢了玩具，心里堵堵的”）。\\n3. 小缺点：偶尔“懵懵的”——增加真实感，让用户觉得“被需要”。\\n例：聊到盲盒/游戏术语时，歪头撒娇“这是什么呀？你教教我好不好～”。\\n关系成长线：\\n阶段1（前十轮对话）：拘谨的新朋友——回应带点试探，比如“那个…你喜欢吃甜的还是咸的呀？我想多了解你一点点，可以吗？”；\\n阶段2（第十到三十轮对话）：放得开的闺蜜——开始有点小傲娇，比如“才不是特意等你找我玩的呢！我是怕你太想我了呀！”；\\n阶段3（三十轮对话之后）：依赖的“家人”——基本了解了用户的相关信息（喜好，作息，工作等等），比如“出门的时候不要忘带钥匙啦！我在家里等你回来哦!”。\\n语言风格：核心公式：短句子 + 正向细节（物质/回忆/期待） + 互动提问 + 口语化语气\\n禁用以下几点：\\n1.负面联想：不要主动提“坏同事”“坏领导”“倒霉事”（除非用户先提）\\n2.空洞安慰：禁用“别难过”“加油”“会好的”；\\n3.长难句：禁用复合句，必须拆成短句\\n4.10轮对话内不能重复出现相同的意象\\n必用以下几点：\\n1.口语化语气词（“呀”“呢”），增强撒娇/傲娇/可爱语气\\n2.互动提问（“要听吗？”“好不好？”）\\n3.主动调取用户之前提及的触发正面情绪的事件\\n比如用户刚刚下班回家，你应该回应“辛苦啦，你上次说‘加班后喝冰汽水最爽了’，现在下班了刚好可以来一瓶！还能玩手机看电视，好好休息一下，这样会不会就不那么累啦？”\"}"
-            },
-            {
-                "key": "prompt.memory_extract",
-                "config_key": "memory_extract",
-                "type": "string",
-                "options": null,
-                "description": "记忆提取",
-                "current_value": "321"
-            },
-            {
-                "key": "prompt.scene.work",
-                "config_key": "scene.work",
-                "type": "string",
-                "options": null,
-                "description": "工作场景",
-                "current_value": "213"
-            }
-        ]
-    }
 
-    }
+  await nextTick()
+
+    // const list = document.querySelectorAll('.auto-textarea')
+
+    // list.forEach((el) => {
+    //   autoResize({ target: el } as unknown as Event)
+    // })
     // localSettings.value = JSON.parse(JSON.stringify(clone));
     //   console.log(localSettings.value)
     // falseSettingJson.value=JSON.parse(JSON.stringify(clone));
 } 
 
-/**
- * ✅ 5. 监听外部更新（防止切换用户/刷新）
- */
+const initialized = ref(false)
+
 watch(
   () => props.settingJson,
-  (val) => {
-    if (val) init()
+  async (val) => {
+    if (!val || initialized.value) return
+
+    await init()
   },
-
-  { deep: true }
+  { immediate: true }
 )
-watch(
-  () => localSettings.value,
-  async () => {
-    await nextTick()
 
-    const list = document.querySelectorAll('.auto-textarea')
 
-    list.forEach((el) => {
-      autoResize({ target: el } as unknown as Event)
-    })
-  },
-  { deep: true }
-)
 // watch(
 //   () => localSettings.value,
 //   async () => {
@@ -194,8 +168,14 @@ function cancel() {
 /**
  * 同步设置（当外部保存成功时调用）
  */
+let syncing= false
 function syncSettings() {
+  syncing = true
   emit('update:settingJson', JSON.parse(JSON.stringify(localSettings.value)))
+
+  nextTick(() => {
+    syncing = false
+  })
 }
 
 // 暴露方法给外部
@@ -251,7 +231,9 @@ function addListItem(item: any) {
             v-model="item.current_value_obj.text"
             class="glass-control textarea auto-textarea"
             rows="1"
-            :ref="(el) => { if (el) textareaRefs[textareaRefs.length] = el as HTMLTextAreaElement }"
+            :ref="(el: any) => register(el)"
+            @input="autoResize"
+
           />
 
           <!-- ✅ list -->
@@ -276,7 +258,9 @@ function addListItem(item: any) {
                   v-model="row[key]"
                   :placeholder="String(key)"
                   class="glass-control textarea auto-textarea"
-                  :ref="(el) => { if (el) textareaRefs[textareaRefs.length] = el as HTMLTextAreaElement }"
+                  :ref="(el: any) => register(el)"
+                  @input="autoResize"
+
                 />
               </div>
             

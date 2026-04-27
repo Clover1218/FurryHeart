@@ -47,15 +47,6 @@ const isFetchingHistory = ref(false)
 const showSettings = ref(false)
 const settingsPanelRef = ref<InstanceType<typeof SettingsPanel> | null>(null)
 
-// 应用设置（示例）
-function applySettings(settings: any) {
-  document.documentElement.style.fontSize = `${settings.fontSize}px`
-  if (settings.theme === 'dark') {
-    document.body.classList.add('dark-theme')
-  } else {
-    document.body.classList.remove('dark-theme')
-  }
-}
 
 const handleSendMessage = async (message: string) => {
   const shouldScroll = chatLayerRef.value?.isAtBottom?.()
