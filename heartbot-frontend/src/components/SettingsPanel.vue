@@ -21,30 +21,15 @@ function autoResize(e: Event) {
     el.style.overflowY = 'auto'
   }
 }
-/**
- * ✅ 1. Props：外部传入配置
- */
 const props = defineProps<{
   settingJson: any
 }>()
-
-/**
- * ✅ 2. 事件
- */
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', payload: any): void // 只返回 diff
   (e: 'update:settingJson', value: any): void // 通知外部更新 settingJson
 }>()
-
-/**
- * ✅ 3. 本地编辑副本（关键）
- */
 const localSettings = ref<any>({})
-
-/**
- * ✅ 4. 初始化
- */
 onMounted(async () => {
   init()
   await nextTick()
@@ -53,11 +38,18 @@ onMounted(async () => {
     autoResize({ target: el } as unknown as Event)
   })
 })
-function parseCurrentValue(val: string) {
+function parseCurrentValue(val: string, type: string) {
   try {
-    return JSON.parse(val)
+    const parsed = JSON.parse(val)
+
+    if (type === 'list') {
+      return Array.isArray(parsed) ? parsed : []
+    }
+
+    return parsed
   } catch (e) {
-    return { text: val } // fallback
+    if (type === 'list') return []
+    return { text: val }
   }
 }
 const falseSettingJson=ref<any>({})
@@ -66,7 +58,7 @@ function init() {
     localSettings.value = JSON.parse(JSON.stringify(props.settingJson))
 
   localSettings.value.prompt.forEach((item: any) => {
-    item.current_value_obj = parseCurrentValue(item.current_value)
+    item.current_value_obj = parseCurrentValue(item.current_value,item.type)
   })
     const clone={
     "code": 0,
@@ -122,20 +114,36 @@ watch(
   async () => {
     await nextTick()
 
-    textareaRefs.value.forEach((el) => {
+    const list = document.querySelectorAll('.auto-textarea')
+
+    list.forEach((el) => {
       autoResize({ target: el } as unknown as Event)
     })
   },
   { deep: true }
 )
-function encodeCurrentValue(obj: any) {
+// watch(
+//   () => localSettings.value,
+//   async () => {
+//     await nextTick()
+
+//     textareaRefs.value.forEach((el) => {
+//       autoResize({ target: el } as unknown as Event)
+//     })
+//   },
+//   { deep: true }
+// )
+function encodeCurrentValue(obj: any, type: string) {
+  if (type === 'list') {
+    return JSON.stringify(obj)
+  }
   return JSON.stringify(obj)
 }
 function getDiff() {
   const original = props.settingJson
   const updated = localSettings.value
   for (const item of updated.prompt) {
-        item.current_value = encodeCurrentValue(item.current_value_obj)
+        item.current_value = encodeCurrentValue(item.current_value_obj,item.type)
     }
   console.log(original)
   console.log(updated)
@@ -166,10 +174,13 @@ function getDiff() {
  */
 function saveSettings() {
   localSettings.value.prompt.forEach((item: any) => {
-    item.current_value = JSON.stringify(item.current_value_obj)
+    item.current_value = encodeCurrentValue(
+      item.current_value_obj,
+      item.type
+    )
   })
+
   const diff = getDiff()
-  console.log(diff)
   emit('save', diff)
 }
 
@@ -191,6 +202,22 @@ function syncSettings() {
 defineExpose({
   syncSettings
 })
+function addListItem(item: any) {
+  if (!item.current_value_obj.length) {
+    item.current_value_obj.push({})
+    return
+  }
+
+  const template = item.current_value_obj[0]
+
+  const newItem: any = {}
+
+  Object.keys(template).forEach((key) => {
+    newItem[key] = ''
+  })
+
+  item.current_value_obj.push(newItem)
+}
 </script>
 
 <template>
@@ -220,11 +247,57 @@ defineExpose({
           </label>
 
           <textarea
-  v-model="item.current_value_obj.text"
-  class="glass-control textarea"
-  rows="1"
-  :ref="(el) => { if (el) textareaRefs[localSettings.prompt.indexOf(item)] = el as HTMLTextAreaElement }"
-/>
+            v-if="item.type === 'string'"
+            v-model="item.current_value_obj.text"
+            class="glass-control textarea auto-textarea"
+            rows="1"
+            :ref="(el) => { if (el) textareaRefs[textareaRefs.length] = el as HTMLTextAreaElement }"
+          />
+
+          <!-- ✅ list -->
+          <div v-else-if="item.type === 'list'" class="list-editor">
+          
+            <div
+              v-for="(row, rowIndex) in item.current_value_obj"
+              :key="rowIndex"
+              class="list-item"
+            >
+              
+              <!-- 动态字段 -->
+              <div
+                v-for="(val, key) in row"
+                :key="key"
+                class="list-field"
+              >
+                <label v-if="String(key)== 'scene_name'">场景名称</label>
+                <label v-if="String(key)== 'condition'">触发条件</label>
+                <label v-if="String(key)== 'response_text'">回复策略</label>
+                <textarea
+                  v-model="row[key]"
+                  :placeholder="String(key)"
+                  class="glass-control textarea auto-textarea"
+                  :ref="(el) => { if (el) textareaRefs[textareaRefs.length] = el as HTMLTextAreaElement }"
+                />
+              </div>
+            
+              <!-- 删除 -->
+              <button
+                class="delete-btn"
+                @click="item.current_value_obj.splice(rowIndex, 1)"
+              >
+                删除
+              </button>
+            </div>
+          
+            <!-- 新增 -->
+            <button
+              class="add-btn"
+              @click="addListItem(item)"
+            >
+              + 添加一项
+            </button>
+          
+          </div>
         </div>
         </div>
       </div>
@@ -415,5 +488,48 @@ input[type="range"] {
 }
 .textarea::placeholder {
   color: rgba(255, 255, 255, 0.4);
+}
+.list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-field input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.add-btn {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.delete-btn {
+  align-self: flex-end;
+  padding: 4px 10px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 </style>

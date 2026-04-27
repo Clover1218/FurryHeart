@@ -5,6 +5,7 @@ import ChatBubble from './ChatBubble.vue'
 interface Message {
   role: string
   text: string
+  debug_info?: string
 }
 
 defineProps<{
@@ -81,6 +82,7 @@ defineExpose({
       :key="index"
       :text="msg.text"
       :role="msg.role"
+      :debug_info="msg.debug_info"
     />
   </div>
 </template>

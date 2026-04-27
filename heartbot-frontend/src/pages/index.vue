@@ -1,20 +1,45 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-
+import { useDialog ,NButton} from 'naive-ui'
 import ChatLayer from "@/components/ChatLayer.vue"
 import InputBox from '@/components/InputBox.vue'
 import { loginApi, type LoginResponse } from '@/utils/auth'
 import { setToken, removeToken } from '@/utils/token'
-import { chatApi, getHistoryApi } from '@/utils/chat'
+import { chatApi, clearHistoryApi, getHistoryApi } from '@/utils/chat'
 import LoginWidget from '@/components/LoginWidget.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
 import SettingsButton from '@/components/SettingsButton.vue'
 import { configUIApi, configUserUpdateApi } from '@/utils/config'
-
+const dialog = useDialog()
 const messages = ref([
-  { role: 'assistant', text: '你来了。' },
+  { role: 'assistant', text: '你来了。' ,debug_info:""},
 ])
+const handleClearHistory = (e?: MouseEvent) => {
+  (e?.currentTarget as HTMLButtonElement)?.blur?.()
 
+  dialog.warning({
+    title: '确认清空记录？',
+    content: '这个操作不可恢复，确定要删除所有聊天记录吗？',
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        // 👇 这里你自己实现
+        const result=await clearHistoryApi()
+
+        // 本地清空
+        messages.value=[]
+
+        nextCursor.value = ''
+
+        await nextTick()
+        chatLayerRef.value?.scrollToBottom()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  })
+}
 const nextCursor = ref<string>('')
 const chatLayerRef = ref<any>(null)
 const isFetchingHistory = ref(false)
@@ -34,12 +59,12 @@ function applySettings(settings: any) {
 
 const handleSendMessage = async (message: string) => {
   const shouldScroll = chatLayerRef.value?.isAtBottom?.()
-  messages.value.push({ role: 'user', text: message })
+  messages.value.push({ role: 'user', text: message ,debug_info:""})
   await nextTick()
   if (shouldScroll) chatLayerRef.value?.scrollToBottom()
 
   const result = (await chatApi(message)).data
-  messages.value.push({ role: 'ai', text: result.reply })
+  messages.value.push({ role: 'ai', text: result.reply ,debug_info: result.debug_info})
   await nextTick()
   if (shouldScroll) chatLayerRef.value?.scrollToBottom()
 }
@@ -52,7 +77,7 @@ const handleLogin = async (openId: string) => {
   console.log("awd",SettingsJson)
   const res = (await getHistoryApi(nextCursor.value)).data
   messages.value = []
-  messages.value.push(...res.messages)
+  messages.value.push(...res.messages.map((msg: any) => ({ ...msg, debug_info: msg.debug_info || '' })))
   nextCursor.value = res.next_cursor || ''
 
   await nextTick()
@@ -73,7 +98,7 @@ const handleLoadMore = async () => {
 
   try {
     const result = (await getHistoryApi(nextCursor.value)).data
-    messages.value.unshift(...result.messages)
+    messages.value.unshift(...result.messages.map((msg: any) => ({ ...msg, debug_info: msg.debug_info || '' })))
     nextCursor.value = result.next_cursor || ''
   } finally {
     await nextTick()
@@ -99,6 +124,12 @@ const handleSettingsPanelSave=async (diff:any) =>{
       <div class="header-bar">
         <div class="settings-wrapper">
           <SettingsButton @click="showSettings = true" />
+            <n-button
+    class="glass-btn danger-btn"
+    @click="handleClearHistory"
+  >
+    清空记录
+  </n-button>
         </div>
         <div class="login-wrapper">
           <LoginWidget
@@ -132,6 +163,12 @@ const handleSettingsPanelSave=async (diff:any) =>{
 </template>
 
 <style scoped>
+.danger-btn {
+  margin-left: 10px;
+  background: rgba(255, 80, 80, 0.7);
+  color: black;
+  
+}
 /* 顶部栏 */
 .header-bar {
   position: absolute;
@@ -190,5 +227,17 @@ const handleSettingsPanelSave=async (diff:any) =>{
   min-height: 0;
   padding-top: 100px;
   padding-bottom: 40px;
+  
+}
+.glass-btn {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 </style>

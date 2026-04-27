@@ -3,7 +3,9 @@ import os
 from api.device_api import register_device_routes
 from api.ws_api import register_ws_routes
 from api.config_api import register_config_routes
+
 from core.config import config
+from services.scene_service import SceneService
 from core.ws_manager import WSManager
 from repositories.device_repo import DeviceRepo
 from repositories.config_repo import ConfigRepo
@@ -66,9 +68,10 @@ async def lifespan(app: FastAPI):
     emotion_service= EmotionService(llm_service,logger)
     history_service= HistoryService(history_repo,logger)
     embedding_service= EmbeddingService(logger)
+    scene_service= SceneService(llm_service,logger)
     memory_service = MemoryService(memory_repo,embedding_service,llm_service,logger)
     config_service = ConfigService(config_repo)
-    chat = ChatOrchestrator(session_service,emotion_service,history_service,memory_service,llm_service,config_service,logger)
+    chat = ChatOrchestrator(session_service,emotion_service,history_service,memory_service,scene_service,llm_service,config_service,logger)
 
     auth_service = AuthService(auth_repo,logger)
     user_service = UserService(user_repo,logger)
@@ -82,6 +85,14 @@ async def lifespan(app: FastAPI):
         "device": device_service,
         "config": config_service,
         "ws": ws_service
+    }
+    app.state.repos = {
+        "history": history_repo,
+        "memory": memory_repo,
+        "auth": auth_repo,
+        "user": user_repo,
+        "device": device_repo,
+        "config": config_repo
     }
     app.state.logger = logger
     yield

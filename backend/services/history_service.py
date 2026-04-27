@@ -37,7 +37,7 @@ class HistoryService:
             role = item.role
             content = item.content
             if role == "assistant":
-                history_str += f"心偶:{content}\n"
+                history_str += f"绒绒:{content}\n"
             elif role == "user":
                 history_str += f"用户:{content}\n"
 

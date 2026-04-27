@@ -1,7 +1,13 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { NDialogProvider } from 'naive-ui'
 
+
+</script>
 <template>
-  <router-view />
+  <n-dialog-provider>
+    <router-view />
+  </n-dialog-provider>
+  
 </template>
 
 <style scoped>

@@ -2,6 +2,7 @@ import { http } from '@/utils/http'
 
 export interface ChatResponse {
   reply: string
+  debug_info: string
 }
 
 export interface HistoryResponse {
@@ -15,4 +16,7 @@ export const chatApi = (input: string) => {
 
 export const getHistoryApi = (input: string) => {
   return http.get<HistoryResponse>(`/chat/history?cursor=${input}&limit=20`)
+}
+export const clearHistoryApi = () => {
+  return http.get<any>('/chat/clear') 
 }

@@ -123,63 +123,7 @@ emotion_detect_template: Template = Template("""
 {{input}}
 """)
 scene_detect_template:Template=Template("""
-你是一个场景识别模块（scene_service）。
 
-你的任务是：
-基于用户当前输入，判断其所处的生活场景。
-
-⚠️ 注意：
-- 只基于当前输入
-- 不要使用历史信息
-- 不要解释
-- 只输出JSON
-
-----------------------------------
-
-【场景分类（scene）】
-
-可选值：
-
-- work（工作/职场压力/加班/领导/同事）
-- marriage_pressure（被催婚/相亲/年龄焦虑）
-- future_confusion（对未来迷茫/方向不清/人生焦虑）
-- family_attachment（对家人的牵挂/不舍/内疚）
-- none（不属于以上）
-
-----------------------------------
-
-【输出格式】
-
-{
-  "scene": "..."
-}
-
-----------------------------------
-
-【示例】
-
-输入：
-“我妈最近一直催我结婚，真的很烦”
-
-输出：
-{
-  "scene": "marriage_pressure"
-}
-
-输入：
-“感觉未来一片迷茫，不知道该做什么”
-
-输出：
-{
-  "scene": "future_confusion"
-}
-
-----------------------------------
-
-现在请分析：
-
-用户输入：
-{{input}}
 """)
 base_chat_template:Template = Template("""
                                        
@@ -200,6 +144,13 @@ base_chat_template:Template = Template("""
 {{ history }}
 {% endif %}
 
+{% if scene %}
+----------------------------------
+用户当前处于 {{ scene }} 场景
+你的回复应该参照以下策略                   
+{{response_strategy}}
+                                       
+{% endif %}
 ----------------------------------
 【用户当前输入】
 {{ input }}
