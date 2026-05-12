@@ -10,11 +10,12 @@ class DeepSeekClient:
         self.client = OpenAI(api_key=API_KEY,base_url=AI_API)      
     async def chat(self,prompt:str,temperature:int=0.7):
         response = self.client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             messages=[
                 {"role": "user", "content": prompt},
             ],
             stream=False,
+            extra_body={"thinking": {"type": "disabled"}},
             temperature=temperature,
         )
         return response.choices[0].message.content

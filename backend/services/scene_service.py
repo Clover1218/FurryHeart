@@ -37,27 +37,13 @@ class SceneService:
                     scene_conditions.append(f"场景 '{scene_name}' 的判断条件: {condition}")
                     scene_map[scene_name] = response_text
             
-            # 拼接场景条件和历史记录 scene_detect_template
-            prompt = """
-            # 你是一个场景判断助手，你需要根据用户与绒绒的对话记录，来判断用户处于哪一个场景
-            
-            ## 可用场景及其判断条件:
-            {scene_conditions}
-            
-            ## 历史记录:
-            {history}
-            
-            ## 任务:
-            请根据历史记录(已经按照时间升序排序，即越后面的是最新的)，判断用户当前处于哪个场景。
-            只需要返回场景名称，不要返回其他内容。
-            如果没有匹配的场景，或者没有足够的证据进行准确推断，请返回 "无"
-            """
-            
+         
             scene_conditions_str = "\n".join(scene_conditions)
-            prompt = prompt.format(
-                scene_conditions=scene_conditions_str,
-                history=history
-            )
+            prompt :str= scene_detect_template.render(scene_conditions=scene_conditions_str,history=history)
+            # prompt.format(
+            #     scene_conditions=scene_conditions_str,
+            #     history=history
+            # )
             
             # 调用 LLM 获取判断的场景
             detected_scene = await self.llm.generate(prompt)

@@ -13,10 +13,15 @@ export interface HistoryResponse {
 export const chatApi = (input: string) => {
   return http.post<ChatResponse>('/chat', { input })
 }
-
+export const getMemoryGraphApi = () => {
+  return http.get<ChatResponse>('/chat/memory/graph')
+}
 export const getHistoryApi = (input: string) => {
   return http.get<HistoryResponse>(`/chat/history?cursor=${input}&limit=20`)
 }
 export const clearHistoryApi = () => {
   return http.get<any>('/chat/clear') 
+}
+export const ExtractMemoryApi = () => {
+  return http.post<any>('/chat/update_memory') 
 }

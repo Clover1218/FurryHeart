@@ -1,11 +1,11 @@
 <template>
-  <div class="layout">
+  <div class="memory-graph-container">
     <!-- 左侧图谱 -->
     <div class="graph-wrapper">
       <div ref="graphRef" class="graph-container"></div>
     </div>
 
-    <!-- 右侧固定信息栏 -->
+    <!-- 右侧信息栏 -->
     <div class="sidebar">
       <template v-if="selectedNode">
         <div class="title">
@@ -52,7 +52,20 @@
 
 <script setup lang="ts">
 import { Graph } from '@antv/g6'
-import { onMounted, ref } from 'vue'
+import {
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  nextTick,
+} from 'vue'
+
+const props = defineProps<{
+  graphData: {
+    nodes: any[]
+    edges: any[]
+  }
+}>()
 
 const graphRef = ref<HTMLDivElement>()
 
@@ -61,187 +74,101 @@ const selectedNode = ref<any>(null)
 let graph: Graph | null = null
 
 /**
- * 原始数据
+ * 处理后的数据
  */
-const rawGraphData = {
-  nodes: [
-    {
-      id: '635b086c-726d-4585-afc2-30a7b2133bda',
-      label: '情绪上头',
-      type: 'entity',
-
-      memories: [
-        {
-          id: '1',
-
-          content: '用户推测老师情绪容易上头是因为更年期。',
-
-          emotion: 'neutral',
-
-          importance: 0.4,
-        },
-      ],
-    },
-
-    {
-      id: '8942ed75-9f1d-4640-bf49-67ca124f9480',
-      label: '老师',
-      type: 'entity',
-
-      memories: [
-        {
-          id: '2',
-
-          content: '老师在群里压力商业运营和硬件端的同学。',
-
-          emotion: 'fear',
-
-          importance: 0.75,
-        },
-      ],
-    },
-
-    {
-      id: 'ff62607c-95a0-40dc-bfb0-00a1c1454881',
-      label: '用户',
-      type: 'entity',
-
-      memories: [
-        {
-          id: '3',
-
-          content: '用户喜欢晒太阳，享受安静放松的时光。',
-
-          emotion: 'joy',
-
-          importance: 0.5,
-        },
-      ],
-    },
-
-    {
-      id: 'd58f8850-9e7f-4af5-803f-c48c7bcca807',
-      label: 'AI情感陪伴项目',
-      type: 'entity',
-
-      memories: [
-        {
-          id: '4',
-
-          content: '用户参与了一个AI情感陪伴项目。',
-
-          emotion: 'neutral',
-
-          importance: 0.7,
-        },
-      ],
-    },
-
-    {
-      id: '9dfe08cf-726c-42ba-a5fa-d12a90711b69',
-      label: '红烧肉盖浇饭',
-      type: 'entity',
-
-      memories: [
-        {
-          id: '5',
-
-          content: '用户喜欢吃红烧肉盖浇饭。',
-
-          emotion: 'joy',
-
-          importance: 0.6,
-        },
-      ],
-    },
-  ],
-
-  edges: [
-    {
-      source: '8942ed75-9f1d-4640-bf49-67ca124f9480',
-
-      target: '635b086c-726d-4585-afc2-30a7b2133bda',
-
-      relation: '容易',
-    },
-
-    {
-      source: 'ff62607c-95a0-40dc-bfb0-00a1c1454881',
-
-      target: 'd58f8850-9e7f-4af5-803f-c48c7bcca807',
-
-      relation: '参与',
-    },
-
-    {
-      source: 'ff62607c-95a0-40dc-bfb0-00a1c1454881',
-
-      target: '9dfe08cf-726c-42ba-a5fa-d12a90711b69',
-
-      relation: '喜欢',
-    },
-  ],
-}
-
-/**
- * 关键：
- * 预处理 label
- * 不使用 callback
- */
-const graphData = {
-  nodes: rawGraphData.nodes.map((node) => ({
-    ...node,
-
-    style: {
-      labelText:
-        node.label.length > 8
-          ? node.label.slice(0, 8) + '...'
-          : node.label,
-    },
-  })),
-
-  edges: rawGraphData.edges.map((edge, index) => ({
-    ...edge,
-
-    id: `edge-${index}`,
-
-    style: {
-      labelText: edge.relation,
-    },
-  })),
-}
+const processedData = ref({
+  nodes: [] as any[],
+  edges: [] as any[],
+})
 
 /**
  * node map
  */
 const nodeMap = new Map()
 
-graphData.nodes.forEach((node) => {
-  nodeMap.set(node.id, node)
-})
+/**
+ * 数据预处理
+ */
+const processData = () => {
+  if (!props.graphData) return
 
-onMounted(async () => {
+  processedData.value = {
+    nodes:
+      props.graphData.nodes?.map((node) => ({
+        ...node,
+
+        style: {
+          labelText:
+            node.label?.length > 8
+              ? node.label.slice(0, 8) + '...'
+              : node.label,
+        },
+      })) || [],
+
+    edges:
+      props.graphData.edges?.map((edge, index) => ({
+        ...edge,
+
+        id: edge.id || `edge-${index}`,
+
+        style: {
+          labelText: edge.relation || '',
+        },
+      })) || [],
+  }
+
+  nodeMap.clear()
+
+  processedData.value.nodes.forEach((node) => {
+    nodeMap.set(node.id, node)
+  })
+}
+
+/**
+ * 初始化图谱
+ */
+const initGraph = async () => {
+  await nextTick()
+
   if (!graphRef.value) return
+
+  if (processedData.value.nodes.length === 0) return
+
+  /**
+   * 销毁旧实例
+   */
+  if (graph) {
+    graph.destroy()
+    graph = null
+  }
 
   graph = new Graph({
     container: graphRef.value,
 
-    width: graphRef.value.clientWidth,
+    /**
+     * 关键：
+     * 不要用 clientWidth/clientHeight
+     */
+    width: graphRef.value.offsetWidth || 800,
 
-    height: graphRef.value.clientHeight,
+    height: graphRef.value.offsetHeight || 600,
 
     autoFit: 'view',
 
-    data: graphData,
+    data: processedData.value,
 
     layout: {
-      type: 'fruchterman',
-
-      gravity: 8,
-
-      speed: 5,
-
-      clustering: true,
+      type: 'force-atlas2',
+        
+      preventOverlap: true,
+        
+      kr: 120,
+        
+      kg: 20,
+        
+      nodeSize: 46,
+        
+      maxIteration: 2000,
     },
 
     node: {
@@ -259,6 +186,8 @@ onMounted(async () => {
         labelFill: '#ffffff',
 
         labelFontSize: 11,
+
+        cursor: 'pointer',
       },
 
       state: {
@@ -282,9 +211,12 @@ onMounted(async () => {
 
         endArrow: false,
 
-        labelFill: '#cbd5e1',
-
+        /**
+         * 保持水平
+         */
         labelAutoRotate: false,
+
+        labelFill: '#cbd5e1',
 
         labelFontSize: 10,
 
@@ -307,14 +239,25 @@ onMounted(async () => {
 
   await graph.render()
 
+  /**
+   * force layout 必须延迟 fit
+   */
   setTimeout(() => {
     graph?.fitView()
-  }, 300)
+  }, 500)
 
   /**
-   * 默认节点
+   * 默认选中第一个节点
    */
-  selectedNode.value = graphData.nodes[0]
+  if (processedData.value.nodes.length > 0) {
+    selectedNode.value =
+      processedData.value.nodes[0]
+
+    graph.setElementState(
+      processedData.value.nodes[0].id,
+      ['selected']
+    )
+  }
 
   /**
    * 点击节点
@@ -332,34 +275,96 @@ onMounted(async () => {
 
     selectedNode.value = nodeData
 
-    graphData.nodes.forEach((node) => {
-      graph?.setElementState(node.id, {
-        selected: false,
-      })
+    /**
+     * 清空状态
+     */
+    processedData.value.nodes.forEach((node) => {
+      graph?.setElementState(node.id, [])
     })
 
-    graph?.setElementState(nodeId, {
-      selected: true,
-    })
+    /**
+     * 高亮
+     */
+    graph?.setElementState(nodeId, 
+      ['selected'],
+    )
   })
+}
+
+/**
+ * resize
+ */
+const handleResize = () => {
+  if (!graph || !graphRef.value) return
+
+  graph.setSize(
+    graphRef.value.offsetWidth || 800,
+    graphRef.value.offsetHeight || 600
+  )
+
+  setTimeout(() => {
+    graph?.fitView()
+  }, 300)
+}
+
+/**
+ * watch 数据
+ */
+watch(
+  () => props.graphData,
+  async () => {
+    processData()
+
+    await initGraph()
+  },
+  {
+    immediate: true,
+
+    deep: true,
+  }
+)
+
+onMounted(() => {
+  window.addEventListener(
+    'resize',
+    handleResize
+  )
+})
+
+onUnmounted(() => {
+  window.removeEventListener(
+    'resize',
+    handleResize
+  )
+
+  if (graph) {
+    graph.destroy()
+  }
 })
 </script>
 
 <style scoped>
-.layout {
+.memory-graph-container {
   width: 100%;
 
   height: 100vh;
 
   display: flex;
 
+  overflow: hidden;
+
   background: #020617;
 }
 
-/* 左侧图谱 */
-
+/**
+ * 左侧图谱
+ */
 .graph-wrapper {
   flex: 1;
+
+  min-width: 0;
+
+  min-height: 0;
 
   position: relative;
 }
@@ -370,14 +375,18 @@ onMounted(async () => {
   height: 100%;
 }
 
-/* 右侧栏 */
-
+/**
+ * 右侧栏
+ */
 .sidebar {
   width: 360px;
 
+  flex-shrink: 0;
+
   background: #0f172a;
 
-  border-left: 1px solid rgba(255,255,255,0.08);
+  border-left: 1px solid
+    rgba(255, 255, 255, 0.08);
 
   padding: 24px;
 
@@ -423,9 +432,10 @@ onMounted(async () => {
 }
 
 .memory-card {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
 
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid
+    rgba(255, 255, 255, 0.06);
 
   border-radius: 16px;
 
@@ -435,7 +445,7 @@ onMounted(async () => {
 }
 
 .memory-card:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
 
   transform: translateY(-2px);
 }

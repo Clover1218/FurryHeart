@@ -29,6 +29,7 @@ from repositories.memory_repo import MemoryRepo
 from repositories.auth_repo import AuthRepo
 from repositories.user_repo import UserRepo
 from repositories.history_repo import HistoryRepo
+from repositories.session_repo import SessionRepo
 
 from services.session_service import SessionService
 from services.emotion_service import EmotionService
@@ -61,17 +62,27 @@ async def lifespan(app: FastAPI):
     memory_repo = MemoryRepo(db_pool,logger)
     history_repo = HistoryRepo(db_pool, logger)
     config_repo = ConfigRepo(db_pool)
+    session_repo = SessionRepo(db_pool, logger)
     iFlow_client=iFlowClient()
     DeepSeek_client=DeepSeekClient()
     llm_service=LLMService(DeepSeek_client,logger)
-    session_service= SessionService()
-    emotion_service= EmotionService(llm_service,logger)
-    history_service= HistoryService(history_repo,logger)
-    embedding_service= EmbeddingService(logger)
-    scene_service= SceneService(llm_service,logger)
-    memory_service = MemoryService(memory_repo,embedding_service,llm_service,logger)
+    session_service = SessionService(
+        session_repo=session_repo,
+        logger=logger,
+        timeout_minutes=5,
+        memory_threshold_minutes=30
+    )
+    emotion_service = EmotionService(llm_service, logger)
+    history_service = HistoryService(history_repo, logger)
+    embedding_service = EmbeddingService(logger)
+    scene_service = SceneService(llm_service, logger)
+    memory_service = MemoryService(memory_repo, embedding_service, llm_service, logger)
     config_service = ConfigService(config_repo)
-    chat = ChatOrchestrator(session_service,emotion_service,history_service,memory_service,scene_service,llm_service,config_service,logger)
+    
+    # 设置 SessionService 的依赖
+    session_service.set_dependencies(memory_service, history_service)
+    
+    chat = ChatOrchestrator(session_service, emotion_service, history_service, memory_service, scene_service, llm_service, config_service, logger)
 
     auth_service = AuthService(auth_repo,logger)
     user_service = UserService(user_repo,logger)
@@ -84,7 +95,8 @@ async def lifespan(app: FastAPI):
         "user": user_service,
         "device": device_service,
         "config": config_service,
-        "ws": ws_service
+        "ws": ws_service,
+        "memory": memory_service,
     }
     app.state.repos = {
         "history": history_repo,
@@ -109,4 +121,6 @@ register_user_routes(app)
 register_config_routes(app)
 register_ws_routes(app)
 register_device_routes(app)
-uvicorn.run(app, host=config.server.host, port=config.server.port)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host=config.server.host, port=config.server.port)

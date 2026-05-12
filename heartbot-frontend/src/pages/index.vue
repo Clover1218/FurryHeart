@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { useDialog ,NButton} from 'naive-ui'
+import { useDialog ,NButton,useMessage} from 'naive-ui'
 import ChatLayer from "@/components/ChatLayer.vue"
 import InputBox from '@/components/InputBox.vue'
 import { loginApi, type LoginResponse } from '@/utils/auth'
 import { setToken, removeToken } from '@/utils/token'
-import { chatApi, clearHistoryApi, getHistoryApi } from '@/utils/chat'
+import { chatApi, clearHistoryApi, ExtractMemoryApi, getHistoryApi } from '@/utils/chat'
 import LoginWidget from '@/components/LoginWidget.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
 import SettingsButton from '@/components/SettingsButton.vue'
+import MemoryButton from '@/components/MemoryButton.vue'
+import MemoryPanel from '@/components/MemoryPanel.vue'
 import { configUIApi, configUserUpdateApi } from '@/utils/config'
 const dialog = useDialog()
+const messageBox = useMessage()
 const messages = ref([
-  { role: 'assistant', text: '你来了。' ,debug_info:""},
+  { role: 'assistant', text: '你来了。' ,debug_info:''},
 ])
 const handleClearHistory = (e?: MouseEvent) => {
   (e?.currentTarget as HTMLButtonElement)?.blur?.()
@@ -34,18 +37,44 @@ const handleClearHistory = (e?: MouseEvent) => {
 
         await nextTick()
         chatLayerRef.value?.scrollToBottom()
+        messageBox.success('清空聊天记录成功')
       } catch (e) {
         console.error(e)
+        messageBox.error('清空聊天记录失败')
       }
     }
   })
 }
+const handleExtractMemory = (e?: MouseEvent) => {
+  (e?.currentTarget as HTMLButtonElement)?.blur?.()
+
+  dialog.warning({
+    title: '确认提取记忆？',
+    content: '这个操作会提取目前聊天里的记忆，仅此而已。',
+    positiveText: '确认',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        // 👇 这里你自己实现
+        const result=(await ExtractMemoryApi()).data
+
+        messageBox.success(`提取了${result.count}条记忆`)
+      } catch (e) {
+        console.error(e)
+        messageBox.error('提取错误')
+      }
+    }
+  })
+}
+
 const nextCursor = ref<string>('')
 const chatLayerRef = ref<any>(null)
 const isFetchingHistory = ref(false)
 
 const showSettings = ref(false)
+const showMemory = ref(false)
 const settingsPanelRef = ref<InstanceType<typeof SettingsPanel> | null>(null)
+const memoryPanelRef = ref<InstanceType<typeof MemoryPanel> | null>(null)
 
 
 const handleSendMessage = async (message: string) => {
@@ -107,6 +136,7 @@ const handleSettingsPanelSave=async (diff:any) =>{
     showSettings.value = false;
   }
 }
+
 </script>
 
 <template>
@@ -115,12 +145,20 @@ const handleSettingsPanelSave=async (diff:any) =>{
       <div class="header-bar">
         <div class="settings-wrapper">
           <SettingsButton @click="showSettings = true" />
+          <MemoryButton @click="showMemory = true "/>
             <n-button
     class="glass-btn danger-btn"
     @click="handleClearHistory"
   >
     清空记录
-  </n-button>
+            </n-button>
+            <n-button
+    class="glass-btn danger-btn"
+    @click="handleExtractMemory"
+  >
+    提取记忆
+            </n-button>
+
         </div>
         <div class="login-wrapper">
           <LoginWidget
@@ -148,6 +186,11 @@ const handleSettingsPanelSave=async (diff:any) =>{
         @close="showSettings = false"
         @save="handleSettingsPanelSave"
         @update:settingJson="(value) => SettingsJson = value"
+      />
+      <MemoryPanel
+        ref="memoryPanelRef"
+        v-if="showMemory"
+        @close="showMemory = false"
       />
     </div>
   </div>
@@ -182,6 +225,7 @@ const handleSettingsPanelSave=async (diff:any) =>{
   /* height: 44px; */
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .full-chat-area {

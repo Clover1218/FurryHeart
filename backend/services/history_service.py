@@ -56,3 +56,7 @@ class HistoryService:
             limit=limit
         )
         return await self.history_repo.get_history_by_cursor(input_data)
+
+    async def get_history_by_session_id(self, session_id):
+        """根据会话ID获取聊天历史"""
+        return await self.history_repo.get_history_by_session_id(session_id)

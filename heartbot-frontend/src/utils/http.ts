@@ -4,7 +4,7 @@ import { getToken } from './token'
 // 主应用 HTTP 实例
 export const http = axios.create({
   baseURL: '/api',
-  timeout: 8000,
+  timeout: 18000,
   headers: {
     'Content-Type': 'application/json'
   },

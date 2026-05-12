@@ -4,6 +4,7 @@ from .device_repo import DeviceRepo
 from .history_repo import HistoryRepo
 from .memory_repo import MemoryRepo
 from .config_repo import ConfigRepo
+from .session_repo import SessionRepo
 
 __all__ = [
     'AuthRepo',
@@ -11,5 +12,6 @@ __all__ = [
     'DeviceRepo',
     'HistoryRepo',
     'MemoryRepo',
-    'ConfigRepo'
+    'ConfigRepo',
+    'SessionRepo'
 ]

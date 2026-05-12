@@ -148,3 +148,36 @@ class HistoryRepo:
         except asyncpg.PostgresError as e:
             self.logger.error(f"清空用户历史失败: {e}")
             raise AppException(message="数据库操作失败", code=500) from e
+
+    async def get_history_by_session_id(self, session_id: str) -> list:
+        """根据会话ID获取聊天历史
+        
+        Args:
+            session_id: 会话ID
+        
+        Returns:
+            聊天历史列表，格式为 [{"role": "xxx", "content": "xxx"}, ...]
+        """
+        query = """
+        SELECT role, content, created_at
+        FROM chat_history
+        WHERE session_id = $1
+        ORDER BY created_at ASC
+        """
+
+        try:
+            async with self.db.acquire() as conn:
+                rows = await conn.fetch(query, session_id)
+
+            history = []
+            for row in rows:
+                history.append({
+                    "role": row["role"],
+                    "content": row["content"],
+                    "created_at": row["created_at"]
+                })
+
+            return history
+        except asyncpg.PostgresError as e:
+            self.logger.error(f"根据会话ID获取聊天历史失败: {e}")
+            raise AppException(message="数据库操作失败", code=500) from e
