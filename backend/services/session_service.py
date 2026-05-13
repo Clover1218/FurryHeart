@@ -54,13 +54,14 @@ class SessionService:
         # 从数据库获取
         db_session = await self.session_repo.get_session(user_id)
         
-        if db_session:
+        if db_session and db_session["state"] != SessionState.ENDED.value:
             if (now - db_session["last_active"]) <= self.timeout:
                 db_session["state"] = SessionState.STARTING.value if db_session["turn_count"] == 0 else SessionState.CHATTING.value
                 self.sessions_cache[user_id] = db_session
                 return db_session
+            
 
-        # 创建新会话
+        # 创建新会话（只有当数据库中没有会话，或者会话状态是 ENDED 时）
         new_session = await self.session_repo.create_session(user_id, device_id)
         self.sessions_cache[user_id] = new_session
         return new_session

@@ -921,7 +921,7 @@ class MemoryRepo:
         query = """
         SELECT id, name 
         FROM memory_nodes 
-        WHERE user_id = $1 AND is_active = true
+        WHERE user_id = $1
         """
         async with self.db.acquire() as conn:
             rows = await conn.fetch(query, user_id)

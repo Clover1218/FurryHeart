@@ -332,15 +332,15 @@ onMounted(async () => {
 
     selectedNode.value = nodeData
 
-    graphData.nodes.forEach((node) => {
-      graph?.setElementState(node.id, {
-        selected: false,
-      })
-    })
+    // graphData.nodes.forEach((node) => {
+    //   graph?.setElementState(node.id, {
+    //     selected: false,
+    //   })
+    // })
 
-    graph?.setElementState(nodeId, {
-      selected: true,
-    })
+    // graph?.setElementState(nodeId, {
+    //   selected: true,
+    // })
   })
 })
 </script>
@@ -465,4 +465,4 @@ onMounted(async () => {
 
   margin-top: 40px;
 }
-</style>
+</style> 

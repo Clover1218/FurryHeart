@@ -50,14 +50,15 @@ const loadGraphData = async () => {
   try {
     // 动态导入 API
     const { getMemoryGraphApi } = await import('@/utils/chat')
-    const result = await getMemoryGraphApi()
+    const result = (await getMemoryGraphApi()).data
 
-    if (result.code === 0 && result.data) {
+    if (result) {
+      graphData.value = result
       console.log(1)
-      graphData.value = result.data
+      graphData.value = result
       console.log(graphData.value)
     } else {
-      error.value = result.message || '获取数据失败'
+      error.value = '获取数据失败'
     }
   } catch (e: any) {
     error.value = e.message || '网络错误'

@@ -8,6 +8,38 @@ from repositories.memory_repo import MemoryRepo
 from core.prompt import memory_extract_template
 from utils.entity_matcher import AcEntityMatcher
 
+
+def clean_json_output(output: str) -> str:
+    """清理 LLM 返回的 JSON 输出，去除代码块标记
+    
+    Args:
+        output: LLM 返回的原始字符串
+        
+    Returns:
+        清理后的纯 JSON 字符串
+    """
+    if not output:
+        return output
+    
+    # 去除前后空白
+    output = output.strip()
+    
+    # 匹配并去除 ```json ... ``` 格式
+    # 支持带语言标识的代码块和不带语言标识的代码块
+    patterns = [
+        r'^```json\s*',      # 开头的 ```json
+        r'^```\s*',          # 开头的 ```（不带语言）
+        r'\s*```$',          # 结尾的 ```
+    ]
+    
+    for pattern in patterns:
+        output = re.sub(pattern, '', output, flags=re.MULTILINE)
+    
+    # 再次去除前后空白
+    output = output.strip()
+    
+    return output
+
 class MemoryService:
 
     def __init__(self, repo:MemoryRepo, embedding_svc:EmbeddingService,llm_svc:LLMService,logger):
@@ -144,9 +176,10 @@ class MemoryService:
             # 调用LLM获取输出
             output = await self.llm.generate(prompt)
             
-            # 解析输出
+            # 解析输出（先清理可能的代码块标记）
             try:
-                memories = json.loads(output)
+                cleaned_output = clean_json_output(output)
+                memories = json.loads(cleaned_output)
             except json.JSONDecodeError:
                 self.logger.error(f"[memory] 解析记忆输出失败: {output}")
                 return 0
