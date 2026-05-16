@@ -1,3 +1,6 @@
+from typing import AsyncIterator
+
+
 class LLMService:
 
     def __init__(self, client, logger):
@@ -13,3 +16,6 @@ class LLMService:
         self.logger.info("[llm] response received")
 
         return resp
+    
+    async def generate_stream(self,prompt:str,temperature=0.7) -> AsyncIterator[str]:
+        return None

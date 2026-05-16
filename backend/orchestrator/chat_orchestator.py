@@ -1,5 +1,6 @@
 import json
 import re
+from typing import AsyncIterator
 
 from services.config_service import ConfigService
 from services.emotion_service import EmotionService
@@ -66,6 +67,19 @@ class ChatOrchestrator:
         await self.history_svc.add_history(user_id, session_id,"assistant", reply)
         
         return reply,debug_info
+
+    async def chat_stream(self,device_id, user_input) -> AsyncIterator[str]:
+        return None
+
+
+
+
+
+
+
+
+
+
 
     async def get_history_by_cursor(self, user_id, cursor=None, limit=20):
         """根据游标获取聊天历史"""

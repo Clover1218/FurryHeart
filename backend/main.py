@@ -4,7 +4,9 @@ from api.device_api import register_device_routes
 from api.ws_api import register_ws_routes
 from api.config_api import register_config_routes
 
-from core.config import config
+from services.tts_service import TTSService
+from services.asr_service import ASRService
+from core.config import ASR_MODEL, DASHSCOPE_API_KEY, DEEPSEEK_API_KEY, SAMPLE_RATE, TTS_MODEL, TTS_VOICE, config
 from services.scene_service import SceneService
 from core.ws_manager import WSManager
 from repositories.device_repo import DeviceRepo
@@ -64,7 +66,9 @@ async def lifespan(app: FastAPI):
     config_repo = ConfigRepo(db_pool)
     session_repo = SessionRepo(db_pool, logger)
     iFlow_client=iFlowClient()
-    DeepSeek_client=DeepSeekClient()
+    DeepSeek_client=DeepSeekClient(api_key=DEEPSEEK_API_KEY)
+    asr_service=ASRService(SAMPLE_RATE,ASR_MODEL,DASHSCOPE_API_KEY)
+    tts_service=TTSService(TTS_MODEL,TTS_VOICE,DASHSCOPE_API_KEY)
     llm_service=LLMService(DeepSeek_client,logger)
     session_service = SessionService(
         session_repo=session_repo,
@@ -88,7 +92,7 @@ async def lifespan(app: FastAPI):
     user_service = UserService(user_repo,logger)
     device_service = DeviceService(device_repo,logger)
 
-    ws_service = WSService(ws_manager=ws_manager,device_service=device_service)
+    ws_service = WSService(ws_manager=ws_manager,device_service=device_service,asr_service=asr_service,tts_service=tts_service,chat_orchestrator=chat)
     app.state.services = {
         "chat": chat,
         "auth": auth_service,

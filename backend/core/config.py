@@ -27,7 +27,13 @@ def load_env_file():
 # 启动时加载 .env 文件
 load_env_file()
 
+DEEPSEEK_API_KEY=os.getenv("DEEPSEEK_API_KEY", "")
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
 
+ASR_MODEL = os.getenv("ASR_MODEL", "")          
+TTS_MODEL = os.getenv("TTS_MODEL", "")             
+TTS_VOICE = os.getenv("TTS_VOICE", "")         
+SAMPLE_RATE = int(os.getenv("SAMPLE_RATE","16000"))
 @dataclass
 class DatabaseConfig:
     host: str = "localhost"

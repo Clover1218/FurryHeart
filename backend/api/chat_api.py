@@ -382,20 +382,51 @@ async def task_extract_memory(req: Request):
         }
 
 
-@router.post("/tasks/cleanup_sessions")
-async def task_cleanup_sessions(req: Request):
-    """清理超时会话（供外部定时任务调用）"""
+@router.post("/tasks/merge_similar_nodes")
+async def task_merge_similar_nodes(req: Request):
+    """合并相似节点（供外部定时任务调用）
+    
+    计算所有节点对之间的相似度，如果相似度大于阈值（默认0.9），
+    则在两个节点之间添加一条 'similar_to' 边。
+    
+    请求体：
+    {
+        "user_id": "用户ID",
+        "threshold": 0.9  // 可选，相似度阈值，默认0.9
+    }
+    
+    响应：
+    {
+        "code": 0,
+        "message": "相似节点合并完成",
+        "data": {
+            "added_edge_count": 新增边数量
+        }
+    }
+    """
     try:
-        chat_orchestrator = req.app.state.services["chat"]
-        session_service = chat_orchestrator.session_svc
+        body = await req.json()
+        user_id = body.get("user_id")
+        threshold = body.get("threshold", 0.9)
         
-        count = await session_service.cleanup_expired_sessions(timeout_minutes=60)
+        if not user_id:
+            return {
+                "code": 400,
+                "message": "缺少 user_id 参数",
+                "data": None
+            }
+        
+        # 获取 memory_service 实例
+        memory_svc: MemoryService = req.app.state.services["memory"]
+        
+        # 调用合并相似节点方法
+        added_count = await memory_svc.merge_similar_nodes(user_id=user_id, threshold=threshold)
         
         return {
             "code": 0,
-            "message": "会话清理任务完成",
+            "message": "相似节点合并完成",
             "data": {
-                "cleaned_count": count
+                "added_edge_count": added_count
             }
         }
     except Exception as e:
