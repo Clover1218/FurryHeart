@@ -30,10 +30,25 @@ success的值为true或者false。
 当success为true时，带user_id，硬件端建议存储user_id。
 ```json
 {
-    "event": "device_bind_confirmed",
+    "event": "server_send_bind_result",
     "data": {
         "success": true,
-        "user_id": "xxx" 
+        "user_id": "只有success为truee时才填写" 
+    }
+}
+```
+
+##### 硬件回复云端的验证结果：
+说明:
+当接收到云端的绑定验证结果后，硬件端做相应处理，然后回复处理结果。
+硬件处理没问题，那success为true，代表硬件端处理完毕，绑定完全成功；
+硬件处理失误，那success为false，填写error_msg，代表硬件端处理失败，绑定不完全成功，需要重新绑定。
+```json
+{
+    "event": "device_bind_result_confirm",
+    "data": {
+        "success": true,
+        "error_msg":"只有success为false时才填写"
     }
 }
 ```
