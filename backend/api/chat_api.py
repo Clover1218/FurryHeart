@@ -1,5 +1,6 @@
 import logging
 from fastapi import Request, APIRouter
+from fastapi.responses import StreamingResponse
 
 from services.memory_service import MemoryService
 from core.exceptions import AppException
@@ -108,6 +109,58 @@ async def chat(req: Request):
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
         logging.info(e)
+        return {
+            "code": 500,
+            "message": str(e),
+            "data": None
+        }
+
+
+@router.post("/stream")
+async def chat_stream(req: Request):
+    """流式聊天接口
+    
+    使用 HTTP Streaming 流式返回 AI 回复
+    
+    请求体：
+    {
+        "input": "用户输入文本"
+    }
+    
+    响应：流式文本，每块包含 AI 回复的一部分
+    """
+    try:
+        auth_svc: AuthService = req.app.state.services["auth"]
+        token = extract_token_from_header(req)
+        if token is None:
+            raise AppException(401, "无token")
+        user_id = await auth_svc.get_user_id_by_token(token)
+        
+        body = await req.json()
+        text = body.get("input")
+        
+        chat_service: ChatOrchestrator = req.app.state.services["chat"]
+        
+        async def generate_stream():
+            async for chunk in chat_service.chat_stream(user_id, text):
+                # 确保每个 chunk 都是独立的字节块
+                yield chunk.encode('utf-8')
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="application/octet-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Transfer-Encoding": "chunked",
+                "X-Accel-Buffering": "no",
+            }
+        )
+    except AppException as e:
+        logging.info(e.message)
+        return {"code": e.code, "message": e.message, "data": None}
+    except Exception as e:
+        logging.error(f"流式聊天错误: {e}")
         return {
             "code": 500,
             "message": str(e),
@@ -382,20 +435,51 @@ async def task_extract_memory(req: Request):
         }
 
 
-@router.post("/tasks/cleanup_sessions")
-async def task_cleanup_sessions(req: Request):
-    """清理超时会话（供外部定时任务调用）"""
+@router.post("/tasks/merge_similar_nodes")
+async def task_merge_similar_nodes(req: Request):
+    """合并相似节点（供外部定时任务调用）
+    
+    计算所有节点对之间的相似度，如果相似度大于阈值（默认0.9），
+    则在两个节点之间添加一条 'similar_to' 边。
+    
+    请求体：
+    {
+        "user_id": "用户ID",
+        "threshold": 0.9  // 可选，相似度阈值，默认0.9
+    }
+    
+    响应：
+    {
+        "code": 0,
+        "message": "相似节点合并完成",
+        "data": {
+            "added_edge_count": 新增边数量
+        }
+    }
+    """
     try:
-        chat_orchestrator = req.app.state.services["chat"]
-        session_service = chat_orchestrator.session_svc
+        body = await req.json()
+        user_id = body.get("user_id")
+        threshold = body.get("threshold", 0.9)
         
-        count = await session_service.cleanup_expired_sessions(timeout_minutes=60)
+        if not user_id:
+            return {
+                "code": 400,
+                "message": "缺少 user_id 参数",
+                "data": None
+            }
+        
+        # 获取 memory_service 实例
+        memory_svc: MemoryService = req.app.state.services["memory"]
+        
+        # 调用合并相似节点方法
+        added_count = await memory_svc.merge_similar_nodes(user_id=user_id, threshold=threshold)
         
         return {
             "code": 0,
-            "message": "会话清理任务完成",
+            "message": "相似节点合并完成",
             "data": {
-                "cleaned_count": count
+                "added_edge_count": added_count
             }
         }
     except Exception as e:

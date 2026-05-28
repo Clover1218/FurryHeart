@@ -1,5 +1,105 @@
 # 绒绒心语-前后端测试
-此文档面向前端、后端、提示词负责人，方便快速掌握项目结构并实现并行开发
+此文档面向硬件、前端、后端、提示词负责人，方便快速掌握项目结构并实现并行开发
+## 当前代办
+### TOP1 完成硬件端的绑定闭环
+#### 写在前面：
+目前方案：
+服务器ws连接地址为ws://1.13.15.207:8000/{device_id}
+device_id出厂时分配，唯一，写死在硬件里
+#### 主要绑定流程：
+- (硬件配网成功后)小程序端向云端(api/devcie/bind)发起绑定请求 ↓
+- 云端返回一个绑定token给小程序端 ↓
+- 小程序端将token通过蓝牙写入硬件端 ↓
+- 硬件端**通过ws连接**将token发给云端进行验证 ↓
+- 云端返回验证结果，硬件**通过ws连接**接收，同时给云端再发一个确认的信息，若失败，硬件回到初始状态；若成功，do what you want ↓
+
+#### 建议交互格式：
+##### 硬件发token给云端:
+```json
+{
+    "event": "device_send_bind_token",
+    "data": {
+        "token": "a1b2c3...",
+    }
+}
+```
+##### 硬件接收云端的验证结果：
+说明:
+success的值为true或者false。
+当success为false时，不带user_id。
+当success为true时，带user_id，硬件端建议存储user_id。
+```json
+{
+    "event": "server_send_bind_result",
+    "data": {
+        "success": true,
+        "user_id": "只有success为truee时才填写" 
+    }
+}
+```
+
+##### 硬件回复云端的验证结果：
+说明:
+当接收到云端的绑定验证结果后，硬件端做相应处理，然后回复处理结果。
+硬件处理没问题，那success为true，代表硬件端处理完毕，绑定完全成功；
+硬件处理失误，那success为false，填写error_msg，代表硬件端处理失败，绑定不完全成功，需要重新绑定。
+```json
+{
+    "event": "device_bind_result_confirm",
+    "data": {
+        "success": true,
+        "error_msg":"只有success为false时才填写"
+    }
+}
+```
+### TOP2 完成解绑逻辑
+#### 主要解绑流程：
+- (硬件配网成功后)小程序端向云端(api/devcie/unbind)发起解绑请求 ↓
+- 云端返回一个解绑token给小程序端 ↓
+- 小程序端将token通过蓝牙写入硬件端 ↓
+- 硬件端**通过ws连接**将token发给云端进行验证 ↓
+- 云端返回验证结果，硬件**通过ws连接**接收，同时给云端再发一个确认的信息，若失败，硬件回到初始状态；若成功，do what you want ↓
+
+#### 建议交互格式：
+##### 硬件发token给云端:
+```json
+{
+    "event": "device_send_unbind_token",
+    "data": {
+        "token": "a1b2c3...",
+    }
+}
+```
+##### 硬件接收云端的验证结果：
+说明:
+success的值为true或者false。
+当success为false时，不带user_id。
+当success为true时，带user_id，硬件端建议存储user_id。
+```json
+{
+    "event": "server_send_unbind_result",
+    "data": {
+        "success": true,
+        "user_id": "只有success为true时才填写" 
+    }
+}
+```
+
+##### 硬件回复云端的验证结果：
+说明:
+当接收到云端的绑定验证结果后，硬件端做相应处理，然后回复处理结果。
+硬件处理没问题，那success为true，代表硬件端处理完毕，绑定完全成功；
+硬件处理失误，那success为false，填写error_msg，代表硬件端处理失败，绑定不完全成功，需要重新绑定。
+```json
+{
+    "event": "device_unbind_result_confirm",
+    "data": {
+        "success": true,
+        "error_msg":"只有success为false时才填写"
+    }
+}
+```
+
 ## 当前项目状态
 
 由于需要先测试记忆系统和提示词，准备Web端测试成熟后，再适配硬件端，最后移植到小程序端。后端已经预留适配两端的接口。

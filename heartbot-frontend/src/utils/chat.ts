@@ -13,6 +13,7 @@ export interface HistoryResponse {
 export const chatApi = (input: string) => {
   return http.post<ChatResponse>('/chat', { input })
 }
+
 export const getMemoryGraphApi = () => {
   return http.get<ChatResponse>('/chat/memory/graph')
 }

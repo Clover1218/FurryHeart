@@ -1,14 +1,31 @@
-[2026-05-13 14:21:30,875] [INFO] 启动服务
-[2026-05-13 14:22:08,365] [INFO] [EmbeddingService] 初始化模型: SentenceTransformer(
-  (0): Transformer({'max_seq_length': 256, 'do_lower_case': False, 'architecture': 'BertModel'})
-  (1): Pooling({'word_embedding_dimension': 384, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
-  (2): Normalize()
-), embedding_dim=384
-[2026-05-13 14:22:25,297] [INFO] 服务关闭
-[2026-05-13 14:22:41,338] [INFO] 启动服务
-[2026-05-13 14:22:59,347] [INFO] [EmbeddingService] 初始化模型: SentenceTransformer(
-  (0): Transformer({'max_seq_length': 256, 'do_lower_case': False, 'architecture': 'BertModel'})
-  (1): Pooling({'word_embedding_dimension': 384, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
-  (2): Normalize()
-), embedding_dim=384
-[2026-05-13 14:35:25,043] [INFO] [MemoryRepo] 获取用户 3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b 的节点列表: 3 条
+[2026-05-28 14:17:05,628] [INFO] 启动服务
+[2026-05-28 14:18:44,878] [INFO] 启动服务
+[2026-05-28 14:19:05,441] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 14:20:02,532] [INFO] 启动服务
+[2026-05-28 14:20:03,498] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 14:43:41,918] [INFO] 启动服务
+[2026-05-28 14:43:42,426] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 14:46:59,451] [INFO] [llm] streaming request
+[2026-05-28 14:47:04,774] [INFO] [llm] streaming response completed
+[2026-05-28 14:47:34,629] [INFO] [llm] streaming request
+[2026-05-28 14:47:38,203] [INFO] [llm] streaming response completed
+[2026-05-28 14:56:28,684] [INFO] 启动服务
+[2026-05-28 14:56:29,689] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 14:56:43,223] [INFO] [llm] streaming request
+[2026-05-28 14:56:47,247] [INFO] [llm] streaming response completed
+[2026-05-28 14:58:00,002] [INFO] [llm] streaming request
+[2026-05-28 14:58:03,824] [INFO] [llm] streaming response completed
+[2026-05-28 14:59:10,839] [INFO] [llm] streaming request
+[2026-05-28 14:59:13,975] [INFO] [llm] streaming response completed
+[2026-05-28 15:01:40,575] [INFO] [llm] streaming request
+[2026-05-28 15:01:45,242] [INFO] [llm] streaming response completed
+[2026-05-28 15:11:50,428] [INFO] 启动服务
+[2026-05-28 15:11:51,251] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 15:13:48,653] [INFO] 服务关闭
+[2026-05-28 15:15:42,156] [INFO] 启动服务
+[2026-05-28 15:15:43,109] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 17:07:23,839] [INFO] 启动服务
+[2026-05-28 17:07:24,862] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=
+[2026-05-28 17:20:14,538] [INFO] 启动服务
+[2026-05-28 17:21:01,289] [INFO] 启动服务
+[2026-05-28 17:21:02,421] [INFO] [EmbeddingService] 初始化模型: , embedding_dim=

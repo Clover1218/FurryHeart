@@ -927,3 +927,50 @@ class MemoryRepo:
             rows = await conn.fetch(query, user_id)
         
         return [(str(row['id']), row['name']) for row in rows]
+
+    async def add_edge_between_nodes(self, user_id: str, source_node_id: str, target_node_id: str, relation_type: str = "similar_to", strength: float = 1.0) -> str:
+        """
+        在两个节点之间添加边
+        
+        Args:
+            user_id: 用户ID
+            source_node_id: 源节点ID
+            target_node_id: 目标节点ID
+            relation_type: 关系类型，默认为 "similar_to"
+            strength: 关系强度
+        
+        Returns:
+            创建的边ID
+        """
+        async with self.db.acquire() as conn:
+            edge_id = await self._create_or_update_edge(
+                conn,
+                source_node_id=source_node_id,
+                target_node_id=target_node_id,
+                relation_type=relation_type,
+                strength=strength
+            )
+        
+        self.logger.info(f"[MemoryRepo] 在节点 {source_node_id} 和 {target_node_id} 之间创建边: {relation_type}")
+        return edge_id
+
+    async def get_existing_edges(self, user_id: str) -> set[tuple[str, str]]:
+        """
+        获取用户已存在的所有边（用于去重）
+        
+        Args:
+            user_id: 用户ID
+        
+        Returns:
+            边的集合，每条边表示为 (source_node_id, target_node_id)
+        """
+        query = """
+        SELECT source_node_id, target_node_id
+        FROM memory_edges e
+        JOIN memory_nodes s ON e.source_node_id = s.id
+        WHERE s.user_id = $1
+        """
+        async with self.db.acquire() as conn:
+            rows = await conn.fetch(query, user_id)
+        
+        return {(str(row['source_node_id']), str(row['target_node_id'])) for row in rows}

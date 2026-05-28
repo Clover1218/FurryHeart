@@ -210,3 +210,108 @@ class MemoryService:
             self.logger.error(f"[memory] 提取记忆失败: {e}")
             return 0
 
+    async def merge_similar_nodes(self, user_id: str, threshold: float = 0.9) -> int:
+        """
+        合并相似节点：计算所有节点对之间的相似度，超过阈值则添加边
+        
+        Args:
+            user_id: 用户ID
+            threshold: 相似度阈值，默认0.9
+        
+        Returns:
+            新添加的边数量
+        """
+        try:
+            # 获取用户的所有节点
+            all_nodes = await self.repo.get_all_nodes(user_id)
+            if len(all_nodes) < 2:
+                self.logger.info(f"[memory] 用户 {user_id} 节点数量不足，无需合并")
+                return 0
+            
+            self.logger.info(f"[memory] 开始合并相似节点，共 {len(all_nodes)} 个节点")
+            
+            # 计算每个节点名称的向量
+            node_embeddings = {}
+            for node_id, node_name in all_nodes:
+                embedding = await self.embedding.embed(node_name)
+                node_embeddings[node_id] = {
+                    'name': node_name,
+                    'embedding': embedding
+                }
+            
+            # 获取已存在的边（用于去重）
+            existing_edges = await self.repo.get_existing_edges(user_id)
+            
+            # 枚举所有节点对，计算相似度
+            added_count = 0
+            node_ids = list(node_embeddings.keys())
+            
+            for i in range(len(node_ids)):
+                for j in range(i + 1, len(node_ids)):
+                    node_id1 = node_ids[i]
+                    node_id2 = node_ids[j]
+                    
+                    # 检查是否已存在边（双向检查）
+                    if (node_id1, node_id2) in existing_edges or (node_id2, node_id1) in existing_edges:
+                        continue
+                    
+                    # 计算余弦相似度
+                    embedding1 = node_embeddings[node_id1]['embedding']
+                    embedding2 = node_embeddings[node_id2]['embedding']
+                    
+                    similarity = self._cosine_similarity(embedding1, embedding2)
+                    
+                    # 如果相似度超过阈值，添加边
+                    if similarity >= threshold:
+                        name1 = node_embeddings[node_id1]['name']
+                        name2 = node_embeddings[node_id2]['name']
+                        
+                        # 在两个方向都添加边（无向图）
+                        await self.repo.add_edge_between_nodes(
+                            user_id=user_id,
+                            source_node_id=node_id1,
+                            target_node_id=node_id2,
+                            relation_type="similar_to",
+                            strength=similarity
+                        )
+                        await self.repo.add_edge_between_nodes(
+                            user_id=user_id,
+                            source_node_id=node_id2,
+                            target_node_id=node_id1,
+                            relation_type="similar_to",
+                            strength=similarity
+                        )
+                        
+                        self.logger.info(f"[memory] 节点 '{name1}' 与 '{name2}' 相似度 {similarity:.4f}，已添加边")
+                        added_count += 1
+            
+            self.logger.info(f"[memory] 相似节点合并完成，共添加 {added_count} 条边")
+            return added_count
+        
+        except Exception as e:
+            self.logger.error(f"[memory] 合并相似节点失败: {e}")
+            return 0
+
+    def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
+        """
+        计算两个向量之间的余弦相似度
+        
+        Args:
+            vec1: 向量1
+            vec2: 向量2
+        
+        Returns:
+            余弦相似度（0-1）
+        """
+        if not vec1 or not vec2:
+            return 0.0
+        
+        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        norm1 = math.sqrt(sum(a * a for a in vec1))
+        norm2 = math.sqrt(sum(b * b for b in vec2))
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        
+        return dot_product / (norm1 * norm2)
+

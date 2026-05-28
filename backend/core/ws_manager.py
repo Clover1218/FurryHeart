@@ -13,6 +13,9 @@ class WSManager:
     def disconnect(self, device_id: str):
         self._connections.pop(device_id, None)
 
+    def is_device_online(self, device_id: str) -> bool:
+        return device_id in self._connections
+
     async def send_to_device(self, device_id: str, message: str) -> bool:
         ws = self._connections.get(device_id)
         if ws:
