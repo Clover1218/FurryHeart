@@ -68,8 +68,14 @@ class ChatOrchestrator:
         
         return reply,debug_info
 
-    async def chat_stream(self,device_id, user_input) -> AsyncIterator[str]:
-        return None
+    async def chat_stream(self, device_id, user_input) -> AsyncIterator[str]:
+        prompt="做个自我介绍"
+        full_reply = ""
+        async for chunk in self.llm_svc.generate_stream(prompt):
+            full_reply += chunk
+            yield chunk
+        
+
 
 
 

@@ -17,5 +17,11 @@ class LLMService:
 
         return resp
     
-    async def generate_stream(self,prompt:str,temperature=0.7) -> AsyncIterator[str]:
-        return None
+    async def generate_stream(self, prompt: str, temperature=0.7) -> AsyncIterator[str]:
+        """流式生成响应"""
+        self.logger.info("[llm] streaming request")
+        
+        async for chunk in self.client.chat_stream(prompt, temperature):
+            yield chunk
+        
+        self.logger.info("[llm] streaming response completed")

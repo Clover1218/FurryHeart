@@ -183,7 +183,7 @@ class DeviceRepo:
         """
         query = """
         UPDATE device_info 
-        SET user_id = NULL, 
+        SET user_id = '', 
             status = 'offline',
             updated_at = NOW()
         WHERE device_id = $1
@@ -218,6 +218,59 @@ class DeviceRepo:
             # 并发注册时可能冲突，忽略
             return True
 
+    async def create_bind_token(self, device_id: str, user_id: str, ttl: int = 300) -> Optional[str]:
+        """创建绑定令牌，存储在 Redis 中
+
+        Args:
+            device_id: 设备唯一标识
+            user_id: 用户ID
+            ttl: 令牌有效时间（秒），默认5分钟
+
+        Returns:
+            绑定令牌字符串，如果 Redis 不可用返回 None
+        """
+        if self.redis is None:
+            return None
+        token = str(uuid.uuid4()).replace('-', '')
+        token_data = json.dumps({"device_id": device_id, "user_id": user_id})
+        await self.redis.setex(f"bind_token:{token}", ttl, token_data)
+        await self.redis.setex(f"bind_token_device:{device_id}", ttl, token)
+        return token
+
+    async def consume_bind_token(self, token: str) -> Optional[dict]:
+        """消费（获取并删除）绑定令牌，一次性使用
+
+        Args:
+            token: 绑定令牌
+
+        Returns:
+            令牌数据 {"device_id": str, "user_id": str}，无效或过期返回 None
+        """
+        if self.redis is None:
+            return None
+        data = await self.redis.get(f"bind_token:{token}")
+        if data is None:
+            return None
+        await self.redis.delete(f"bind_token:{token}")
+        token_data = json.loads(data)
+        device_id = token_data["device_id"]
+        await self.redis.delete(f"bind_token_device:{device_id}")
+        return token_data
+
+    async def get_bind_token_by_device(self, device_id: str) -> Optional[str]:
+        """根据设备 ID 获取当前有效的绑定令牌
+
+        Args:
+            device_id: 设备唯一标识
+
+        Returns:
+            绑定令牌，如果没有返回 None
+        """
+        if self.redis is None:
+            return None
+        token = await self.redis.get(f"bind_token_device:{device_id}")
+        return token
+
     async def get_user_devices(self, user_id: str) -> list[dict]:
         """获取用户绑定的所有设备
 
@@ -245,3 +298,42 @@ class DeviceRepo:
                     'created_at': row['created_at'].isoformat() if row['created_at'] else None
                 })
             return devices
+
+    async def create_unbind_token(self, device_id: str, user_id: str, ttl: int = 300) -> Optional[str]:
+        """创建解绑令牌，存储在 Redis 中
+
+        Args:
+            device_id: 设备唯一标识
+            user_id: 用户ID（发起解绑的用户）
+            ttl: 令牌有效时间（秒），默认5分钟
+
+        Returns:
+            解绑令牌字符串，如果 Redis 不可用返回 None
+        """
+        if self.redis is None:
+            return None
+        token = str(uuid.uuid4()).replace('-', '')
+        token_data = json.dumps({"device_id": device_id, "user_id": user_id})
+        await self.redis.setex(f"unbind_token:{token}", ttl, token_data)
+        await self.redis.setex(f"unbind_token_device:{device_id}", ttl, token)
+        return token
+
+    async def consume_unbind_token(self, token: str) -> Optional[dict]:
+        """消费（获取并删除）解绑令牌，一次性使用
+
+        Args:
+            token: 解绑令牌
+
+        Returns:
+            令牌数据 {"device_id": str, "user_id": str}，无效或过期返回 None
+        """
+        if self.redis is None:
+            return None
+        data = await self.redis.get(f"unbind_token:{token}")
+        if data is None:
+            return None
+        await self.redis.delete(f"unbind_token:{token}")
+        token_data = json.loads(data)
+        device_id = token_data["device_id"]
+        await self.redis.delete(f"unbind_token_device:{device_id}")
+        return token_data

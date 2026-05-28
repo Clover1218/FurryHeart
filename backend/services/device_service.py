@@ -3,6 +3,7 @@ import os
 import httpx
 import uuid
 import time
+from typing import Optional
 from core.config import config
 from repositories.device_repo import DeviceRepo
 from core.exceptions import AppException
@@ -137,6 +138,30 @@ class DeviceService:
         self.logger.info(f"设备 {device_id} 已连接")
         return True
 
+    async def create_bind_token(self, device_id: str, user_id: str, ttl: int = 300) -> str:
+        """创建绑定令牌
+
+        Args:
+            device_id: 设备唯一标识
+            user_id: 用户ID
+            ttl: 令牌有效时间（秒），默认5分钟
+
+        Returns:
+            绑定令牌字符串
+        """
+        return await self.device_repo.create_bind_token(device_id, user_id, ttl)
+
+    async def consume_bind_token(self, token: str) -> Optional[dict]:
+        """消费绑定令牌
+
+        Args:
+            token: 绑定令牌
+
+        Returns:
+            令牌数据 {"device_id": str, "user_id": str}，无效返回 None
+        """
+        return await self.device_repo.consume_bind_token(token)
+
     async def handle_device_disconnect(self, device_id: str):
         """处理设备断开连接
 
@@ -146,3 +171,27 @@ class DeviceService:
         # 更新设备状态为 offline
         await self.update_device_status(device_id, 'offline')
         self.logger.info(f"设备 {device_id} 已断开连接")
+
+    async def create_unbind_token(self, device_id: str, user_id: str, ttl: int = 300) -> str:
+        """创建解绑令牌
+
+        Args:
+            device_id: 设备唯一标识
+            user_id: 用户ID（发起解绑的用户）
+            ttl: 令牌有效时间（秒），默认5分钟
+
+        Returns:
+            解绑令牌字符串
+        """
+        return await self.device_repo.create_unbind_token(device_id, user_id, ttl)
+
+    async def consume_unbind_token(self, token: str) -> Optional[dict]:
+        """消费解绑令牌
+
+        Args:
+            token: 解绑令牌
+
+        Returns:
+            令牌数据 {"device_id": str, "user_id": str}，无效返回 None
+        """
+        return await self.device_repo.consume_unbind_token(token)

@@ -1,5 +1,6 @@
 import logging
 from fastapi import Request, APIRouter
+from fastapi.responses import StreamingResponse
 
 from services.memory_service import MemoryService
 from core.exceptions import AppException
@@ -108,6 +109,58 @@ async def chat(req: Request):
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
         logging.info(e)
+        return {
+            "code": 500,
+            "message": str(e),
+            "data": None
+        }
+
+
+@router.post("/stream")
+async def chat_stream(req: Request):
+    """流式聊天接口
+    
+    使用 HTTP Streaming 流式返回 AI 回复
+    
+    请求体：
+    {
+        "input": "用户输入文本"
+    }
+    
+    响应：流式文本，每块包含 AI 回复的一部分
+    """
+    try:
+        auth_svc: AuthService = req.app.state.services["auth"]
+        token = extract_token_from_header(req)
+        if token is None:
+            raise AppException(401, "无token")
+        user_id = await auth_svc.get_user_id_by_token(token)
+        
+        body = await req.json()
+        text = body.get("input")
+        
+        chat_service: ChatOrchestrator = req.app.state.services["chat"]
+        
+        async def generate_stream():
+            async for chunk in chat_service.chat_stream(user_id, text):
+                # 确保每个 chunk 都是独立的字节块
+                yield chunk.encode('utf-8')
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="application/octet-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Transfer-Encoding": "chunked",
+                "X-Accel-Buffering": "no",
+            }
+        )
+    except AppException as e:
+        logging.info(e.message)
+        return {"code": e.code, "message": e.message, "data": None}
+    except Exception as e:
+        logging.error(f"流式聊天错误: {e}")
         return {
             "code": 500,
             "message": str(e),
