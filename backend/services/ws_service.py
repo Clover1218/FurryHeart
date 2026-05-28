@@ -93,10 +93,10 @@ class WSService:
             if user_text:
                 reply_stream_iter = self.chat_orchestrator.chat_stream(device_id, user_text)
 
-                audio_generator, reply_parts, goodbye = self.tts_service.return_audio_generator(reply_stream_iter)
+                audio_generator, reply_parts, goodbye = await self.tts_service.return_audio_generator(reply_stream_iter)
                 async for chunk in audio_generator:
                     await connection.send_bytes(chunk)
-                await connection.ping()
+                await connection.send_text(json.dumps({"event": "audio_stream_end"}))
                 if goodbye[0]:
                     await connection.send_text(json.dumps({"event": "goodbye"}))
                     print("[会话] 发送 goodbye 信号")
@@ -106,7 +106,7 @@ class WSService:
                 print(f"[{device_id}] ASR 未识别到语音，发送静音信号")
                 silence = b'\x00' * 3200
                 await connection.send_bytes(silence)
-                await connection.ping()
+                await connection.send_text(json.dumps({"event": "audio_stream_end"}))
         elif event == "recording_cancelled":
             print(f"[{device_id}] 录音取消（录音过短或用户未说话）")
             self._voice_states[device_id]["recording"] = False
