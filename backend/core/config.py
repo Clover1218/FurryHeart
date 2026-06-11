@@ -99,12 +99,18 @@ class ServerConfig:
 class LogConfig:
     level: str = "INFO"
     file: str = "logs/app.log"
+    dir: str = "logs"
+    console_level: str = "WARNING"
+    format: str = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
     
     @classmethod
     def from_env(cls) -> "LogConfig":
         return cls(
             level=os.getenv("LOG_LEVEL", "INFO"),
-            file=os.getenv("LOG_FILE", "logs/app.log")
+            file=os.getenv("LOG_FILE", "logs/app.log"),
+            dir=os.getenv("LOG_DIR", "logs"),
+            console_level=os.getenv("LOG_CONSOLE_LEVEL", "WARNING"),
+            format=os.getenv("LOG_FORMAT", "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
         )
 
 

@@ -188,7 +188,7 @@ class WSService:
                 if bound:
                     logger.info(f"[{device_id}] 设备绑定成功，用户: {user_id}")
                 else:
-                    logger.error(f"[{device_id}] 设备绑定到数据库失败，用户: {user_id}")
+                    logger.error(f"[{device_id}] 设备绑定到数据库失败，用户: {user_id}", exc_info=True)
             else:
                 logger.warning(f"[{device_id}] 收到硬件绑定确认，但未找到待绑定信息")
         else:
@@ -271,7 +271,7 @@ class WSService:
                 if unbound:
                     logger.info(f"[{device_id}] 设备解绑成功，用户: {user_id}")
                 else:
-                    logger.error(f"[{device_id}] 设备解绑到数据库失败，用户: {user_id}")
+                    logger.error(f"[{device_id}] 设备解绑到数据库失败，用户: {user_id}", exc_info=True)
             else:
                 logger.warning(f"[{device_id}] 收到硬件解绑确认，但未找到待解绑信息")
         else:

@@ -6,6 +6,7 @@ from core.exceptions import AppException
 from services.ws_service import WSService
 from utils.request import extract_token_from_header
 import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
@@ -27,13 +28,13 @@ async def handle_ws_device(websocket: WebSocket, device_id: str):
         # 1. 检查设备 ID 是否存在
         exists = await device_svc.verify_device_id(device_id)
         if not exists:
-            logging.warning(f"设备 {device_id} 不存在，拒绝 WebSocket 连接")
+            logger.warning(f"设备 {device_id} 不存在，拒绝 WebSocket 连接")
             await websocket.close(code=1008, reason="设备不存在")
             return
         
         # 2. 接受连接并更新设备状态为 active
         await websocket.accept()
-        logging.info(f"设备 {device_id} WebSocket 连接成功，状态已更新为 active")
+        logger.info(f"设备 {device_id} WebSocket 连接成功，状态已更新为 active")
         
         # 3. 处理连接
         ws_svc: WSService = websocket.app.state.services["ws"]
@@ -43,11 +44,11 @@ async def handle_ws_device(websocket: WebSocket, device_id: str):
         # 4. 连接断开时更新设备状态为 offline
         try:
             await device_svc.update_device_status(device_id, 'offline')
-            logging.info(f"设备 {device_id} WebSocket 连接断开，状态已更新为 offline")
+            logger.info(f"设备 {device_id} WebSocket 连接断开，状态已更新为 offline")
         except Exception as e:
-            logging.error(f"更新设备 {device_id} 断开状态失败: {e}")
+            logger.error(f"更新设备 {device_id} 断开状态失败: {e}", exc_info=True)
     except Exception as e:
-        logging.error(f"WebSocket 处理错误: {e}")
+        logger.error(f"WebSocket 处理错误: {e}", exc_info=True)
         try:
             # 发生错误时也更新状态为 offline
             await device_svc.update_device_status(device_id, 'offline')

@@ -1,5 +1,7 @@
 import os
 
+from langchain_deepseek import ChatDeepSeek
+
 from api.device_api import register_device_routes
 from api.ws_api import register_ws_routes
 from api.config_api import register_config_routes
@@ -24,8 +26,10 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 
+import logging
+
 from core.db import create_pool,create_redis_client
-from core.logger import create_logger
+from core.logger import setup_logging
 
 from repositories.memory_repo import MemoryRepo
 from repositories.auth_repo import AuthRepo
@@ -43,16 +47,24 @@ from services.llm.iflow_client import iFlowClient
 from services.auth_service import AuthService
 from services.user_service import UserService
 from orchestrator.chat_orchestator import ChatOrchestrator
+from orchestrator.chat_agent import ChatAgent
 
 from api.chat_api import register_chat_routes
 from api.auth_api import register_auth_routes
 from api.user_api import register_user_routes
-
+from dotenv import load_dotenv
+load_dotenv()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger = create_logger()
+    # 初始化日志系统（必须先于其他操作）
+    setup_logging(
+        log_dir=config.log.dir,
+        log_level=getattr(logging, config.log.level.upper(), logging.INFO),
+        console_level=getattr(logging, config.log.console_level.upper(), logging.WARNING),
+    )
+    logger = logging.getLogger("heartbot")
     logger.info("启动服务")
 
     db_pool = await create_pool()
@@ -87,7 +99,11 @@ async def lifespan(app: FastAPI):
     session_service.set_dependencies(memory_service, history_service)
     
     chat = ChatOrchestrator(session_service, emotion_service, history_service, memory_service, scene_service, llm_service, config_service, logger)
-
+    model = ChatDeepSeek(
+        model="deepseek-v4-flash", 
+        temperature=0.7       
+    )
+    chat_agent = ChatAgent(session_service, emotion_service, history_service, memory_service, scene_service, llm_service, config_service, model,logger)
     auth_service = AuthService(auth_repo,logger)
     user_service = UserService(user_repo,logger)
     device_service = DeviceService(device_repo,logger)
@@ -101,6 +117,7 @@ async def lifespan(app: FastAPI):
         "config": config_service,
         "ws": ws_service,
         "memory": memory_service,
+        "chat_agent": chat_agent
     }
     app.state.repos = {
         "history": history_repo,

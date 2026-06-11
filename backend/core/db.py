@@ -1,14 +1,11 @@
 import asyncpg
 import logging
+logger = logging.getLogger(__name__)
 from core.config import config
 import redis.asyncio as redis
 
 async def create_pool(db_url: str = None):
-    """创建数据库连接池
-    
-    Args:
-        db_url: 数据库连接字符串，如果为None则使用配置文件中的DSN
-    """
+    """创建数据库连接池"""
     if db_url is None:
         db_url = config.db.dsn
     
@@ -18,7 +15,7 @@ async def create_pool(db_url: str = None):
         max_size=config.db.max_size,
         command_timeout=config.db.command_timeout
     )
-    logging.info(f"数据库连接池初始化完成: {config.db.host}:{config.db.port}/{config.db.database}")
+    logger.info(f"数据库连接池初始化完成: {config.db.host}:{config.db.port}/{config.db.database}")
     return pool
 
 async def create_redis_client():
@@ -31,9 +28,8 @@ async def create_redis_client():
             decode_responses=True
         )
         await redis_client.ping()
-        logging.info("Reids连接初始化完成")
+        logger.info("Redis连接初始化完成")
         return redis_client
     except Exception as e:
         redis_client = None
         return redis_client
-

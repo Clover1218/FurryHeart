@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from utils.snowflake import new_snowflake_id, parse_snowflake_id
 import logging
+logger = logging.getLogger(__name__)
 
 from repositories.auth_models import (
     GetOrCreateUserInput,
@@ -38,7 +39,6 @@ class AuthRepo:
         
         async with self.db.acquire() as conn:
             try:
-                # 先查询用户是否存在
                 existing_user = await conn.fetchrow(
                     "SELECT user_id FROM user_info WHERE open_id = $1",
                     input_data.open_id
@@ -48,11 +48,9 @@ class AuthRepo:
                     user_id = existing_user['user_id']
                     return GetOrCreateUserOutput(user_id=str(user_id),)
                 else:
-                    # 生成随机昵称
                     nickname = self._generate_nickname()
                     user_id= new_snowflake_id()
-                    logging.info(user_id)
-                    # 插入新用户
+                    logger.info(user_id)
                     await conn.execute(
                         """
                         INSERT INTO user_info (user_id, open_id, nickname, avatar_url)
@@ -65,7 +63,7 @@ class AuthRepo:
             except asyncpg.UniqueViolationError as e:
                 raise AppException(message="用户已存在", code=409) from e
             except asyncpg.PostgresError as e:
-                logging.error(f"数据库操作失败: {e}")
+                logger.error(f"数据库操作失败: {e}", exc_info=True)
                 raise AppException(message="数据库操作失败", code=500) from e
 
     async def get_user(self, input_data: GetUserInput) -> GetUserOutput:
@@ -75,7 +73,6 @@ class AuthRepo:
         
         async with self.db.acquire() as conn:
             try:
-                # 查询用户是否存在
                 existing_user = await conn.fetchrow(
                     "SELECT user_id FROM user_info WHERE open_id = $1",
                     input_data.open_id
@@ -88,15 +85,13 @@ class AuthRepo:
                     return GetUserOutput(user_id="", exist=False)
                 
             except asyncpg.PostgresError as e:
-                logging.error(f"数据库操作失败: {e}")
+                logger.error(f"数据库操作失败: {e}", exc_info=True)
                 raise AppException(message="数据库操作失败", code=500) from e
 
     def _generate_token(self) -> str:
-        """生成唯一 token"""
         return uuid.uuid4().hex
 
     def _generate_nickname(self) -> str:
-        """生成随机昵称"""
         prefix = "用户"
         suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
         return f"{prefix}{suffix}"
@@ -112,14 +107,13 @@ class AuthRepo:
             "created_at": datetime.now().isoformat()
         })
         
-        # 设置过期时间（秒）
         expire_seconds = input_data.expire_days * 24 * 60 * 60
         
         try:
             await self.redis.set(key, value, ex=expire_seconds)
             return SaveTokenOutput(token=token,success=True)
         except Exception as e:
-            logging.error(f"保存 token 失败: {e}")
+            logger.error(f"保存 token 失败: {e}", exc_info=True)
             raise AppException(message="数据库操作失败", code=500) from e
     
     async def get_token(self, input_data: GetTokenInput) -> GetTokenOutput:
@@ -139,7 +133,7 @@ class AuthRepo:
                 )
             return GetTokenOutput(exist=False)
         except Exception as e:
-            logging.error(f"获取 token 失败: {e}")
+            logger.error(f"获取 token 失败: {e}", exc_info=True)
             return GetTokenOutput(exist=False)
     
     async def delete_token(self, input_data: DeleteTokenInput) -> DeleteTokenOutput:
@@ -153,5 +147,5 @@ class AuthRepo:
             await self.redis.delete(key)
             return DeleteTokenOutput(success=True)
         except Exception as e:
-            logging.error(f"删除 token 失败: {e}")
+            logger.error(f"删除 token 失败: {e}", exc_info=True)
             return DeleteTokenOutput(success=False)

@@ -4,6 +4,7 @@ from services.auth_service import AuthService
 from core.exceptions import AppException
 from utils.request import extract_token_from_header
 import logging
+logger = logging.getLogger(__name__)
 from typing import Dict, Any
 
 router = APIRouter(prefix="/api/config")
@@ -26,10 +27,10 @@ async def get_ui_config(r: Request):
             "data": result
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -55,14 +56,14 @@ async def update_user_config(r: Request, updates: Dict[str, Any] = Body(...)):
         }
     except Exception as e:
         print(e)
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
             "data": None
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
 
 

@@ -1,5 +1,6 @@
 """会话数据访问层"""
 
+from typing import Any, Dict, List
 import uuid
 from datetime import datetime, timezone
 
@@ -100,60 +101,46 @@ class SessionRepo:
             result = await conn.execute(query, *params)
             return result != "UPDATE 0"
 
-    async def get_sessions_needing_memory_extraction(self, threshold_minutes: int) -> list:
-        """获取需要提取记忆的会话"""
+    async def get_unextraced_session(self,count:int =5):
         query = """
-        SELECT * FROM sessions
-        WHERE state = 'CHATTING' AND memory_extracted = false
-          AND start_time < NOW() - INTERVAL '1 minute' * $1
-        ORDER BY start_time ASC
+            SELECT device_id,session_id,
+                user_id,turn_count,
+                start_time,last_active,
+                state,created_at,
+                updated_at
+            FROM (
+                SELECT 
+                    *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY device_id 
+                        ORDER BY start_time ASC
+                    ) AS rn
+                FROM sessions
+                WHERE memory_extracted = false
+                  AND state = 'ENDED'
+                  AND device_id IS NOT NULL   
+            ) t
+            WHERE rn <= $1
+            ORDER BY device_id, start_time;
         """
         async with self.db.acquire() as conn:
-            rows = await conn.fetch(query, threshold_minutes)
-            return [self._row_to_dict(row) for row in rows]
+            rows = await conn.fetch(query,count)
 
-    async def get_latest_unextracted_session(self, user_id: str = "") -> dict:
-        """获取最新的未提取记忆的会话
-        
-        Args:
-            user_id: 用户ID（可选），不传则获取所有用户的
-        
-        Returns:
-            会话信息或 None
-        """
-        if user_id:
-            query = """
-            SELECT * FROM sessions
-            WHERE user_id = $1 AND memory_extracted = false
-            ORDER BY start_time DESC
-            LIMIT 1
-            """
-            async with self.db.acquire() as conn:
-                row = await conn.fetchrow(query, user_id)
-                return self._row_to_dict(row) if row else None
-        else:
-            query = """
-            SELECT * FROM sessions
-            WHERE memory_extracted = false
-            ORDER BY start_time DESC
-            LIMIT 1
-            """
-            async with self.db.acquire() as conn:
-                row = await conn.fetchrow(query)
-                return self._row_to_dict(row) if row else None
-
-    async def cleanup_expired_sessions(self, timeout_minutes: int) -> int:
-        """清理超时会话"""
-        query = """
-        DELETE FROM sessions
-        WHERE last_active < NOW() - INTERVAL '1 minute' * $1
-        """
-        async with self.db.acquire() as conn:
-            result = await conn.execute(query, timeout_minutes)
-            deleted_count = int(result.split()[1]) if result.startswith("DELETE") else 0
-            self.logger.info(f"[SessionRepo] 清理了 {deleted_count} 个超时会话")
-            return deleted_count
-
+        result: Dict[str, List[Dict[str, Any]]] = {}
+        for row in rows:
+            device_id = row["device_id"]
+            session_info = {
+                "session_id": row["session_id"],
+                "user_id": row["user_id"],
+                "turn_count": row["turn_count"],
+                "start_time": row["start_time"].isoformat() if row["start_time"] else None,
+                "last_active": row["last_active"].isoformat() if row["last_active"] else None,
+                "state": row["state"],
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+            }
+            result.setdefault(device_id, []).append(session_info)
+        return result
     def _row_to_dict(self, row) -> dict:
         """将数据库行转换为字典"""
         return {

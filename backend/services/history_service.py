@@ -1,10 +1,13 @@
 # services/history_service.py
 
+from datetime import datetime
+from typing import Any, Dict, List
 from repositories.history_repo import HistoryRepo
 from repositories.history_models import (
     AddHistoryInput,
     GetRecentHistoryInput,
-    ClearUserHistoryInput
+    ClearUserHistoryInput,
+    HistoryItem
 )
 
 
@@ -60,3 +63,17 @@ class HistoryService:
     async def get_history_by_session_id(self, session_id):
         """根据会话ID获取聊天历史"""
         return await self.history_repo.get_history_by_session_id(session_id)
+    async def query_history_by_time(self,
+                                    user_id: str,device_id: str,
+                                    start_time: datetime,end_time: datetime,
+                                    max_turns: int = 30) -> tuple[str, Dict[str, Any]]:
+        return await self.history_repo.query_history_by_time(user_id,device_id,start_time,end_time,max_turns)
+    
+    async def get_previous_history(self,user_id:str,device_id:str) -> List[HistoryItem]:
+        input_data = GetRecentHistoryInput(
+            user_id=user_id,
+            limit=self.max_turns * 2  # user + assistant
+        )
+        result = await self.history_repo.get_recent_history(input_data)
+        return result.items
+        

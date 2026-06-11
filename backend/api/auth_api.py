@@ -4,6 +4,7 @@ from models.auth_model import WXLoginRequset,LoginRequset
 from core.exceptions import AppException
 
 import logging
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth")
 
 
@@ -19,10 +20,10 @@ async def wx_login(r:Request,req: WXLoginRequset):
             "data": result
         }
     except AppException as e: 
-        logging.info(e.message)          
+        logger.info(e.message)          
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -40,10 +41,10 @@ async def login(r:Request,req: LoginRequset):
             "data": {"token":result}
         }
     except AppException as e: 
-        logging.info(e.message)          
+        logger.info(e.message)          
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),

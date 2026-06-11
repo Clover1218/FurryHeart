@@ -2,6 +2,7 @@ import re
 import datetime
 import json
 import math
+from typing import Any, List
 from services.llm_service import LLMService
 from services.embedding_service import EmbeddingService
 from repositories.memory_repo import MemoryRepo
@@ -50,7 +51,68 @@ class MemoryService:
     async def fucking(self):
         result=await self.repo.retrieve_memory_in_graph("3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b",['用户','晒太阳'])
         return result
+    async def query_memory(self, user_id, device_id, keyword_list:List[str], top_k=5):
+        try:
+            all_memories:List[Any]=[]
+            for query_text in keyword_list:
+                query_vec = await self.embedding.embed(query_text)
+                vector_memories:List[Any] = await self.repo.retrieve_memory(user_id, device_id, query_vec, top_k=20)
+                all_memories+=vector_memories
+            key = "id"
+            seen = set()
+            unique = []
+            for item in all_memories:
+                val = item[key]
+                if val not in seen:
+                    seen.add(val)
+                    unique.append(item)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            scored_memories = []
 
+            for memory in unique:
+                # 计算 recency
+                last_used_at = memory.get('last_used_at')
+                created_at = memory.get('created_at')
+                t = last_used_at or created_at
+                if t:
+                    delta_days = (now - t).total_seconds() / 86400
+                    recency = math.exp(-delta_days / 7)
+                else:
+                    recency = 0
+
+                # 计算 similarity (从向量检索结果中获取距离)
+                distance = memory.get('distance', 0)
+                similarity = 1 - distance
+
+                # 获取 importance
+                importance = memory.get('importance', 0.5)
+
+                # 过滤低质量记忆
+                if importance < 0.4:
+                    continue
+
+                # 计算最终分数
+                score = (
+                    0.45 * similarity +
+                    0.30 * importance +
+                    0.25 * recency
+                )
+
+                scored_memories.append((memory, score))
+
+            # 按分数排序
+            scored_memories.sort(key=lambda x: x[1], reverse=True)
+
+            # 取前 top_k 条
+            top_memories = [m for m, _ in scored_memories[:top_k]]
+
+            # 更新访问统计
+            memory_ids = [m['id'] for m in top_memories]
+            await self.repo.update_access(memory_ids)
+            return top_memories
+        except:
+            self.logger.error(f"[memory] 检索失败: {e}", exc_info=True)
+            return []
     async def get_memory(self, user_id, device_id, current_text, top_k=5):
         try:
             query_text = current_text
@@ -157,7 +219,7 @@ class MemoryService:
             return top_memories
 
         except Exception as e:
-            self.logger.error(f"[memory] 检索失败: {e}")
+            self.logger.error(f"[memory] 检索失败: {e}", exc_info=True)
             return []
 
     async def extract_memory(self, user_id: str, device_id: str, history: str):
@@ -207,7 +269,7 @@ class MemoryService:
             return count
             
         except Exception as e:
-            self.logger.error(f"[memory] 提取记忆失败: {e}")
+            self.logger.error(f"[memory] 提取记忆失败: {e}", exc_info=True)
             return 0
 
     async def merge_similar_nodes(self, user_id: str, threshold: float = 0.9) -> int:
@@ -289,7 +351,7 @@ class MemoryService:
             return added_count
         
         except Exception as e:
-            self.logger.error(f"[memory] 合并相似节点失败: {e}")
+            self.logger.error(f"[memory] 合并相似节点失败: {e}", exc_info=True)
             return 0
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

@@ -72,3 +72,9 @@ jieba==0.42.1
 # ------------------------------
 # python-jose[cryptography]==3.3.0
 # passlib[bcrypt]==1.7.4
+
+jinja2
+snowflake-id
+requests
+openai
+sentence-transformers

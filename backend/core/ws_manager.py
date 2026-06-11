@@ -1,5 +1,9 @@
 from typing import Dict
 from fastapi import WebSocket
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class WSManager:
     def __init__(self):

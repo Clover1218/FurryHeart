@@ -62,7 +62,7 @@ class SceneService:
                 }
                 
         except Exception as e:
-            self.logger.error(f"场景判断失败: {e}")
+            self.logger.error(f"场景判断失败: {e}", exc_info=True)
             return {
                 "scene_name": "无",
                 "response_strategy": ""

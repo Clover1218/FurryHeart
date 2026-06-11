@@ -1,4 +1,6 @@
 import asyncpg
+import logging
+logger = logging.getLogger(__name__)
 from core.exceptions import AppException
 from repositories.user_models import GetMeBasicInfoInput,GetMeBasicInfoOutput
 class UserRepo:
@@ -21,7 +23,7 @@ class UserRepo:
             except asyncpg.UniqueViolationError as e:
                 raise AppException(message="用户已存在", code=409) from e
             except asyncpg.PostgresError as e:
-                logging.error(f"数据库操作失败: {e}")
+                logger.error(f"数据库操作失败: {e}", exc_info=True)
                 raise AppException(message="数据库操作失败", code=500) from e
 
 

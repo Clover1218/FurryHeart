@@ -8,7 +8,6 @@ import redis.asyncio as redis
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from utils.snowflake import new_snowflake_id, parse_snowflake_id
-import logging
 
 from core.exceptions import AppException
 

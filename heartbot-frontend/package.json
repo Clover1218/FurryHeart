@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@antv/g6": "^5.1.1",
+    "@langchain/core": "^1.1.48",
+    "@langchain/vue": "^1.0.22",
     "axios": "^1.15.2",
     "naive-ui": "^2.44.1",
     "pinia": "^3.0.4",

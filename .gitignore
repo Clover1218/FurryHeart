@@ -27,6 +27,7 @@ tempCodeRunnerFile.py
 
 # IDE 相关
 .idea/
+.trae
 .vscode/
 *.swp
 *.swo

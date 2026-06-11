@@ -1,7 +1,11 @@
 import logging
+
+from services.session_service import SessionService
+logger = logging.getLogger(__name__)
 from fastapi import Request, APIRouter
 from fastapi.responses import StreamingResponse
 
+from orchestrator.chat_agent import ChatAgent
 from services.memory_service import MemoryService
 from core.exceptions import AppException
 from services.auth_service import AuthService
@@ -16,8 +20,13 @@ router = APIRouter(prefix="/api/chat")
 @router.post("/test")
 async def chat(req: Request):
     try:
-        memory_svc:MemoryService = req.app.state.services["memory"]
-        result=await memory_svc.fucking()
+        chat_agent:ChatAgent = req.app.state.services["chat_agent"]
+        
+        body = await req.json()
+        text = body.get("input")
+        user_id = "3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b"
+        device_id = "3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b"
+        result=await chat_agent.chat(text,user_id,device_id)
         return {
             "code": 0,
             "message": "ok",
@@ -26,10 +35,10 @@ async def chat(req: Request):
             }
         }
     except AppException as e: 
-        logging.info(e.message)          
+        logger.info(e.message,exc_info=True)          
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
-        logging.info(e)
+        logger.error(e,exc_info=True)
         return {
             "code": 500,
             "message": str(e),
@@ -48,14 +57,11 @@ async def test_memory(req: Request, current_text: str = ""):
         匹配的记忆列表
     """
     try:
-        # 固定的 user_id 和 device_id
         user_id = "3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b"
         device_id = "3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b"
         
-        # 获取 memory_service 实例
         memory_svc: MemoryService = req.app.state.services["memory"]
         
-        # 调用 get_memory 方法
         memories = await memory_svc.get_memory(
             user_id=user_id,
             device_id=device_id,
@@ -72,16 +78,15 @@ async def test_memory(req: Request, current_text: str = ""):
             }
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
             "data": None
         }
-
 
 
 @router.post("")
@@ -94,21 +99,23 @@ async def chat(req: Request):
         user_id=await auth_svc.get_user_id_by_token(token)
         body = await req.json()
         text = body.get("input")
-        chat_service:ChatOrchestrator = req.app.state.services["chat"]
-        reply , debug_info = await chat_service.chat(user_id=user_id,user_input=text)
+        # chat_service:ChatOrchestrator = req.app.state.services["chat"]
+        chat_agent:ChatAgent = req.app.state.services["chat_agent"]
+        # reply , debug_info = await chat_service.chat(user_id=user_id,user_input=text)
+        reply=await chat_agent.chat(text,user_id,user_id)
         return {
             "code": 0,
             "message": "ok",
             "data": {
                 "reply":reply,
-                "debug_info": debug_info
+                "debug_info": ""
             }
         }
     except AppException as e: 
-        logging.info(e.message)          
+        logger.info(e.message)          
         return {"code":e.code,"message":e.message,"data":None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -118,17 +125,7 @@ async def chat(req: Request):
 
 @router.post("/stream")
 async def chat_stream(req: Request):
-    """流式聊天接口
-    
-    使用 HTTP Streaming 流式返回 AI 回复
-    
-    请求体：
-    {
-        "input": "用户输入文本"
-    }
-    
-    响应：流式文本，每块包含 AI 回复的一部分
-    """
+    """流式聊天接口"""
     try:
         auth_svc: AuthService = req.app.state.services["auth"]
         token = extract_token_from_header(req)
@@ -143,7 +140,6 @@ async def chat_stream(req: Request):
         
         async def generate_stream():
             async for chunk in chat_service.chat_stream(user_id, text):
-                # 确保每个 chunk 都是独立的字节块
                 yield chunk.encode('utf-8')
         
         return StreamingResponse(
@@ -157,10 +153,10 @@ async def chat_stream(req: Request):
             }
         )
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.error(f"流式聊天错误: {e}")
+        logger.error(f"流式聊天错误: {e}", exc_info=True)
         return {
             "code": 500,
             "message": str(e),
@@ -181,7 +177,6 @@ async def get_chat_history(
             raise AppException(401, "无token")
         user_id = await auth_svc.get_user_id_by_token(token)
         
-        # 解析cursor为datetime
         from datetime import datetime
         cursor_datetime = None
         if cursor:
@@ -191,7 +186,6 @@ async def get_chat_history(
                 raise AppException(400, "cursor格式错误")
         
         chat_service: ChatOrchestrator = req.app.state.services["chat"]
-        # 调用get_history_by_cursor方法
         result = await chat_service.get_history_by_cursor(
             user_id=user_id,
             cursor=cursor_datetime,
@@ -207,10 +201,10 @@ async def get_chat_history(
             }
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -229,10 +223,7 @@ async def clear_chat_history(req: Request):
         
         user_id = await auth_svc.get_user_id_by_token(token)
         
-        # 获取 history_repo 实例
         history_repo: HistoryRepo = req.app.state.repos["history"]
-        
-        # 调用清除历史记录的方法
         input_data = ClearUserHistoryInput(user_id=user_id)
         result = await history_repo.clear_user_history(input_data)
         
@@ -244,10 +235,10 @@ async def clear_chat_history(req: Request):
             }
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -266,11 +257,9 @@ async def update_memory(req: Request):
         
         user_id = await auth_svc.get_user_id_by_token(token)
         
-        # 获取 session_service 实例
         chat_orchestrator: ChatOrchestrator = req.app.state.services["chat"]
         session_service = chat_orchestrator.session_svc
         
-        # 调用强制提取记忆方法
         count = await session_service.force_extract_memory(user_id)
         
         return {
@@ -281,10 +270,10 @@ async def update_memory(req: Request):
             }
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -303,10 +292,7 @@ async def get_memory_list(req: Request):
         
         user_id = await auth_svc.get_user_id_by_token(token)
         
-        # 获取 memory_repo 实例
         memory_repo = req.app.state.repos["memory"]
-        
-        # 获取用户记忆列表
         memories = await memory_repo.get_user_memories(user_id)
         
         return {
@@ -317,10 +303,10 @@ async def get_memory_list(req: Request):
             }
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -332,17 +318,7 @@ async def get_memory_list(req: Request):
 async def get_memory_graph(req: Request):
     """获取用户的记忆图谱数据"""
     try:
-        # auth_svc: AuthService = req.app.state.services["auth"]
-        # token = extract_token_from_header(req)
-        # if token is None:
-        #     raise AppException(401, "无token")
-        
-        # user_id = await auth_svc.get_user_id_by_token(token)
-        
-        # 获取 memory_repo 实例
         memory_repo = req.app.state.repos["memory"]
-        
-        # 获取用户的知识图谱数据
         graph_data = await memory_repo.get_user_graph('3f7e4b2c-8a9d-4f1e-9c2b-6a5d4e3f2a1b')
         
         return {
@@ -351,10 +327,10 @@ async def get_memory_graph(req: Request):
             "data": graph_data
         }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -373,17 +349,13 @@ async def delete_memory(req: Request):
         
         await auth_svc.get_user_id_by_token(token)
         
-        # 获取请求体中的 memory_id
         body = await req.json()
         memory_id = body.get("memory_id")
         
         if not memory_id:
             raise AppException(400, "缺少 memory_id 参数")
         
-        # 获取 memory_repo 实例
         memory_repo = req.app.state.repos["memory"]
-        
-        # 删除记忆
         success = await memory_repo.delete_memory(memory_id)
         
         if success:
@@ -399,10 +371,10 @@ async def delete_memory(req: Request):
                 "data": None
             }
     except AppException as e:
-        logging.info(e.message)
+        logger.info(e.message)
         return {"code": e.code, "message": e.message, "data": None}
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
         return {
             "code": 500,
             "message": str(e),
@@ -415,9 +387,9 @@ async def task_extract_memory(req: Request):
     """为超时会话提取记忆（供外部定时任务调用）"""
     try:
         chat_orchestrator = req.app.state.services["chat"]
-        session_service = chat_orchestrator.session_svc
+        session_service:SessionService = chat_orchestrator.session_svc
         
-        count = await session_service.extract_memory_for_expired_sessions()
+        count = await session_service.force_extract_memory("1")
         
         return {
             "code": 0,
@@ -427,7 +399,7 @@ async def task_extract_memory(req: Request):
             }
         }
     except Exception as e:
-        logging.error(e)
+        logger.error(e, exc_info=True)
         return {
             "code": 500,
             "message": str(e),
@@ -437,26 +409,7 @@ async def task_extract_memory(req: Request):
 
 @router.post("/tasks/merge_similar_nodes")
 async def task_merge_similar_nodes(req: Request):
-    """合并相似节点（供外部定时任务调用）
-    
-    计算所有节点对之间的相似度，如果相似度大于阈值（默认0.9），
-    则在两个节点之间添加一条 'similar_to' 边。
-    
-    请求体：
-    {
-        "user_id": "用户ID",
-        "threshold": 0.9  // 可选，相似度阈值，默认0.9
-    }
-    
-    响应：
-    {
-        "code": 0,
-        "message": "相似节点合并完成",
-        "data": {
-            "added_edge_count": 新增边数量
-        }
-    }
-    """
+    """合并相似节点（供外部定时任务调用）"""
     try:
         body = await req.json()
         user_id = body.get("user_id")
@@ -469,10 +422,7 @@ async def task_merge_similar_nodes(req: Request):
                 "data": None
             }
         
-        # 获取 memory_service 实例
         memory_svc: MemoryService = req.app.state.services["memory"]
-        
-        # 调用合并相似节点方法
         added_count = await memory_svc.merge_similar_nodes(user_id=user_id, threshold=threshold)
         
         return {
@@ -483,7 +433,7 @@ async def task_merge_similar_nodes(req: Request):
             }
         }
     except Exception as e:
-        logging.error(e)
+        logger.error(e, exc_info=True)
         return {
             "code": 500,
             "message": str(e),
