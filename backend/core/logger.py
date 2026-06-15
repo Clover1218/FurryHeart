@@ -43,9 +43,9 @@ class DailyFileHandler(logging.Handler):
 
 
 def setup_logging(
-    log_level: int = logging.INFO,
+    log_level: int = logging.ERROR,
     log_dir: str = LOG_DIR,
-    console_level: int = logging.WARNING,
+    console_level: int = logging.ERROR,
 ) -> logging.Logger:
     """配置根日志系统
 

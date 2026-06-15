@@ -118,6 +118,8 @@ class SessionService:
         total_failed=0
         for device_id, sessions in sessions.items():
             success_count = 0
+            if device_id != user_id or user_id == "":
+                continue
             for sess in sessions:
                 session_id = sess["session_id"]
                 user_id = sess["user_id"]

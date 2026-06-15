@@ -78,3 +78,5 @@ snowflake-id
 requests
 openai
 sentence-transformers
+langchain_deepseek
+langgraph

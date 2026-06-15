@@ -381,6 +381,27 @@ async def delete_memory(req: Request):
             "data": None
         }
 
+async def scheduled_task_extract_memory(chat_orchestrator:ChatOrchestrator):
+    try:
+        session_service:SessionService = chat_orchestrator.session_svc
+        
+        count = await session_service.force_extract_memory("1")
+        
+        return {
+            "code": 0,
+            "message": "记忆提取任务完成",
+            "data": {
+                "extracted_count": count
+            }
+        }
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        return {
+            "code": 500,
+            "message": str(e),
+            "data": None
+        }
+
 
 @router.post("/tasks/extract_memory")
 async def task_extract_memory(req: Request):
@@ -389,7 +410,7 @@ async def task_extract_memory(req: Request):
         chat_orchestrator = req.app.state.services["chat"]
         session_service:SessionService = chat_orchestrator.session_svc
         
-        count = await session_service.force_extract_memory("1")
+        count = await session_service.force_extract_memory("")
         
         return {
             "code": 0,

@@ -49,9 +49,10 @@ from services.user_service import UserService
 from orchestrator.chat_orchestator import ChatOrchestrator
 from orchestrator.chat_agent import ChatAgent
 
-from api.chat_api import register_chat_routes
+from api.chat_api import register_chat_routes, scheduled_task_extract_memory
 from api.auth_api import register_auth_routes
 from api.user_api import register_user_routes
+from core.scheduler import add_hourly_task, add_interval_task, start_scheduler, shutdown_scheduler
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -128,8 +129,22 @@ async def lifespan(app: FastAPI):
         "config": config_repo
     }
     app.state.logger = logger
+
+    async def scheduled_extract_memory_task():
+        """每小时执行的记忆检索任务"""
+
+        await scheduled_task_extract_memory(chat)
+
+    add_hourly_task("memory_test_task", scheduled_extract_memory_task)
+    # def gua():
+    #     logger.info("呱呱呱")
+    # add_interval_task("gua",gua,1)
+    start_scheduler()
+    logger.info("定时任务调度器已启动")
+
     yield
 
+    shutdown_scheduler()
     await db_pool.close()
     logger.info("服务关闭")
 
