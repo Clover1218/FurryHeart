@@ -45,10 +45,6 @@ class DatabaseConfig:
     max_size: int = 10
     command_timeout: int = 30
     
-    @property
-    def dsn(self) -> str:
-        return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
-    
     @classmethod
     def from_env(cls) -> "DatabaseConfig":
         return cls(
